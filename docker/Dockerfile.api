@@ -1,0 +1,30 @@
+# Build stage
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+WORKDIR /src
+
+# Copy solution and project files
+COPY Directory.Build.props .
+COPY Directory.Packages.props .
+COPY CoreERP.sln .
+COPY src/CoreERP.Domain/CoreERP.Domain.csproj src/CoreERP.Domain/
+COPY src/CoreERP.Application/CoreERP.Application.csproj src/CoreERP.Application/
+COPY src/CoreERP.Infrastructure/CoreERP.Infrastructure.csproj src/CoreERP.Infrastructure/
+COPY src/CoreERP.Api/CoreERP.Api.csproj src/CoreERP.Api/
+
+# Restore
+RUN dotnet restore src/CoreERP.Api/CoreERP.Api.csproj
+
+# Copy everything and build
+COPY . .
+RUN dotnet publish src/CoreERP.Api/CoreERP.Api.csproj -c Release -o /app/publish --no-restore
+
+# Runtime stage
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
+WORKDIR /app
+
+EXPOSE 8080
+ENV ASPNETCORE_URLS=http://+:8080
+
+COPY --from=build /app/publish .
+
+ENTRYPOINT ["dotnet", "CoreERP.Api.dll"]
