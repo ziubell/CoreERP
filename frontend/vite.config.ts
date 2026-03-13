@@ -106,6 +106,22 @@ export default defineConfig({
       '@api-utils': fileURLToPath(new URL('./src/plugins/fake-api/utils/', import.meta.url)),
     },
   },
+  server: {
+    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'https://localhost:7100',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/hub': {
+        target: 'https://localhost:7100',
+        changeOrigin: true,
+        secure: false,
+        ws: true,
+      },
+    },
+  },
   build: {
     chunkSizeWarningLimit: 5000,
   },
