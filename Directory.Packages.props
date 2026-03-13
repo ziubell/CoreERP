@@ -10,11 +10,12 @@
     <PackageVersion Include="MediatR" Version="12.4.1" />
     <PackageVersion Include="FluentValidation" Version="11.11.0" />
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="11.11.0" />
-    <PackageVersion Include="Mapster" Version="7.4.0" />
-    <PackageVersion Include="Mapster.DependencyInjection" Version="1.0.2" />
+    <PackageVersion Include="Mapster" Version="7.4.2-pre01" />
+    <PackageVersion Include="Mapster.DependencyInjection" Version="1.0.3-pre01" />
 
     <!-- Infrastructure -->
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="9.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.3" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.3" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.3" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.3" />
