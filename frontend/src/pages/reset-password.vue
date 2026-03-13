@@ -16,29 +16,47 @@ definePage({
   meta: {
     layout: 'blank',
     unauthenticatedOnly: true,
+    public: true,
   },
 })
 
-const email = ref('')
+const route = useRoute()
+const router = useRouter()
+
+const isPasswordVisible = ref(false)
+const isConfirmPasswordVisible = ref(false)
 const isLoading = ref(false)
-const isEmailSent = ref(false)
+const isResetSuccess = ref(false)
 const errorMessage = ref<string>()
 const refVForm = ref<VForm>()
 
-const sendResetLink = async () => {
+const form = ref({
+  password: '',
+  confirmPassword: '',
+})
+
+const token = computed(() => route.query.token as string || '')
+const email = computed(() => route.query.email as string || '')
+
+const resetPassword = async () => {
   isLoading.value = true
   errorMessage.value = undefined
 
   try {
-    await $api('/auth/forgot-password', {
+    await $api('/auth/reset-password', {
       method: 'POST',
-      body: { email: email.value },
+      body: {
+        email: email.value,
+        token: token.value,
+        password: form.value.password,
+        confirmPassword: form.value.confirmPassword,
+      },
       onResponseError({ response }) {
-        errorMessage.value = response._data?.message || 'Si è verificato un errore. Riprova.'
+        errorMessage.value = response._data?.message || 'Si è verificato un errore. Il link potrebbe essere scaduto.'
       },
     })
 
-    isEmailSent.value = true
+    isResetSuccess.value = true
   }
   catch (err) {
     console.error(err)
@@ -52,8 +70,12 @@ const onSubmit = () => {
   refVForm.value?.validate()
     .then(({ valid: isValid }) => {
       if (isValid)
-        sendResetLink()
+        resetPassword()
     })
+}
+
+const goToLogin = () => {
+  router.push({ name: 'login' })
 }
 </script>
 
@@ -107,29 +129,47 @@ const onSubmit = () => {
         :max-width="500"
         class="mt-12 mt-sm-0 pa-4"
       >
-        <VCardText v-if="!isEmailSent">
+        <VCardText v-if="!isResetSuccess">
           <h4 class="text-h4 mb-1">
-            Password dimenticata?
+            Reimposta password
           </h4>
           <p class="mb-0">
-            Inserisci la tua email e ti invieremo le istruzioni per reimpostare la password
+            Inserisci la nuova password per il tuo account
           </p>
         </VCardText>
 
-        <VCardText v-if="isEmailSent">
+        <VCardText v-if="isResetSuccess">
           <VAlert
             type="success"
             variant="tonal"
             class="mb-4"
           >
-            <VAlertTitle>Email inviata</VAlertTitle>
+            <VAlertTitle>Password reimpostata</VAlertTitle>
             <p class="mb-0">
-              Se l'indirizzo <strong>{{ email }}</strong> è associato a un account, riceverai un'email con le istruzioni per reimpostare la password.
+              La tua password è stata aggiornata con successo. Puoi ora accedere con le nuove credenziali.
             </p>
+          </VAlert>
+
+          <VBtn
+            block
+            class="mt-4"
+            @click="goToLogin"
+          >
+            Vai al login
+          </VBtn>
+        </VCardText>
+
+        <VCardText v-if="errorMessage && !isResetSuccess">
+          <VAlert
+            type="error"
+            variant="tonal"
+            class="mb-4"
+          >
+            {{ errorMessage }}
           </VAlert>
         </VCardText>
 
-        <VCardText v-if="!isEmailSent">
+        <VCardText v-if="!isResetSuccess">
           <VForm
             ref="refVForm"
             @submit.prevent="onSubmit"
@@ -137,13 +177,28 @@ const onSubmit = () => {
             <VRow>
               <VCol cols="12">
                 <AppTextField
-                  v-model="email"
+                  v-model="form.password"
                   autofocus
-                  label="Email"
-                  type="email"
-                  placeholder="nome@azienda.it"
-                  :rules="[requiredValidator, emailValidator]"
-                  :error-messages="errorMessage"
+                  label="Nuova password"
+                  placeholder="············"
+                  :type="isPasswordVisible ? 'text' : 'password'"
+                  autocomplete="new-password"
+                  :rules="[requiredValidator, passwordValidator]"
+                  :append-inner-icon="isPasswordVisible ? 'tabler-eye-off' : 'tabler-eye'"
+                  @click:append-inner="isPasswordVisible = !isPasswordVisible"
+                />
+              </VCol>
+
+              <VCol cols="12">
+                <AppTextField
+                  v-model="form.confirmPassword"
+                  label="Conferma password"
+                  placeholder="············"
+                  :type="isConfirmPasswordVisible ? 'text' : 'password'"
+                  autocomplete="new-password"
+                  :rules="[requiredValidator, confirmedValidator(form.confirmPassword, form.password)]"
+                  :append-inner-icon="isConfirmPasswordVisible ? 'tabler-eye-off' : 'tabler-eye'"
+                  @click:append-inner="isConfirmPasswordVisible = !isConfirmPasswordVisible"
                 />
               </VCol>
 
@@ -153,7 +208,7 @@ const onSubmit = () => {
                   type="submit"
                   :loading="isLoading"
                 >
-                  Invia link di recupero
+                  Reimposta password
                 </VBtn>
               </VCol>
 
@@ -172,34 +227,6 @@ const onSubmit = () => {
               </VCol>
             </VRow>
           </VForm>
-        </VCardText>
-
-        <VCardText v-if="isEmailSent">
-          <VRow>
-            <VCol cols="12">
-              <VBtn
-                block
-                variant="outlined"
-                @click="isEmailSent = false"
-              >
-                Invia di nuovo
-              </VBtn>
-            </VCol>
-
-            <VCol cols="12">
-              <RouterLink
-                class="d-flex align-center justify-center"
-                :to="{ name: 'login' }"
-              >
-                <VIcon
-                  icon="tabler-chevron-left"
-                  size="20"
-                  class="me-1 flip-in-rtl"
-                />
-                <span>Torna al login</span>
-              </RouterLink>
-            </VCol>
-          </VRow>
         </VCardText>
       </VCard>
     </VCol>
