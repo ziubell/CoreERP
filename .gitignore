@@ -1,5 +1,23 @@
-﻿################################################################################
-# Il file gitignore è stato creato automaticamente da Microsoft(R) Visual Studio.
-################################################################################
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstats
 
-/.vs
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Bb]in/
+[Oo]bj/
+
+# NuGet
+**/packages/*
+*.nupkg
+**/[Pp]ackages/build/
+
+# Misc
+*.log
+*.tmp
