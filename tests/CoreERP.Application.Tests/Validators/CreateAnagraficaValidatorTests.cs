@@ -3,6 +3,7 @@ using CoreERP.Application.Features.Anagrafica.Validators;
 using CoreERP.Domain.Enums;
 using FluentAssertions;
 using FluentValidation.TestHelper;
+using Xunit;
 
 namespace CoreERP.Application.Tests.Validators;
 

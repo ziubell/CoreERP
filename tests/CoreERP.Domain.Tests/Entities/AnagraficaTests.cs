@@ -2,6 +2,7 @@ using CoreERP.Domain.Entities.Anagrafica;
 using CoreERP.Domain.Enums;
 using CoreERP.Domain.Events;
 using FluentAssertions;
+using Xunit;
 
 namespace CoreERP.Domain.Tests.Entities;
 

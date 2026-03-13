@@ -1,5 +1,6 @@
 using CoreERP.Domain.ValueObjects;
 using FluentAssertions;
+using Xunit;
 
 namespace CoreERP.Domain.Tests.ValueObjects;
 

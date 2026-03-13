@@ -2,6 +2,7 @@ using CoreERP.Application.Common.Interfaces;
 using CoreERP.Domain.Interfaces.Services;
 using CoreERP.Infrastructure.Identity;
 using CoreERP.Infrastructure.Persistence;
+using Hangfire;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
