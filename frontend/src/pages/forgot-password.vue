@@ -1,16 +1,7 @@
 <script setup lang="ts">
 import { VForm } from 'vuetify/components/VForm'
-import { useGenerateImageVariant } from '@core/composable/useGenerateImageVariant'
 import { VNodeRenderer } from '@layouts/components/VNodeRenderer'
 import { themeConfig } from '@themeConfig'
-
-import authV2ForgotPasswordIllustrationDark from '@images/pages/auth-v2-forgot-password-illustration-dark.png'
-import authV2ForgotPasswordIllustrationLight from '@images/pages/auth-v2-forgot-password-illustration-light.png'
-import authV2MaskDark from '@images/pages/misc-mask-dark.png'
-import authV2MaskLight from '@images/pages/misc-mask-light.png'
-
-const authThemeImg = useGenerateImageVariant(authV2ForgotPasswordIllustrationLight, authV2ForgotPasswordIllustrationDark)
-const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
 
 definePage({
   meta: {
@@ -58,131 +49,69 @@ const onSubmit = () => {
 </script>
 
 <template>
-  <RouterLink to="/">
-    <div class="auth-logo d-flex align-center gap-x-3">
-      <VNodeRenderer :nodes="themeConfig.app.logo" />
-      <h1 class="auth-title">
-        {{ themeConfig.app.title }}
-      </h1>
-    </div>
-  </RouterLink>
-
-  <VRow
-    class="auth-wrapper bg-surface"
-    no-gutters
-  >
-    <VCol
-      md="8"
-      class="d-none d-md-flex"
+  <div class="auth-wrapper d-flex align-center justify-center pa-4">
+    <VCard
+      class="auth-card pa-4 pt-7"
+      max-width="448"
     >
-      <div class="position-relative bg-background w-100 me-0">
-        <div
-          class="d-flex align-center justify-center w-100 h-100"
-          style="padding-inline: 150px;"
-        >
-          <VImg
-            max-width="468"
-            :src="authThemeImg"
-            class="auth-illustration mt-16 mb-2"
-          />
-        </div>
+      <VCardItem class="justify-center">
+        <RouterLink to="/">
+          <div class="d-flex align-center gap-x-3">
+            <VNodeRenderer :nodes="themeConfig.app.logo" />
+            <h1 class="auth-title">
+              {{ themeConfig.app.title }}
+            </h1>
+          </div>
+        </RouterLink>
+      </VCardItem>
 
-        <img
-          class="auth-footer-mask"
-          :src="authThemeMask"
-          alt="auth-footer-mask"
-          height="280"
-          width="100"
-        >
-      </div>
-    </VCol>
+      <VCardText v-if="!isEmailSent" class="pt-2">
+        <h4 class="text-h4 mb-1">
+          Password dimenticata?
+        </h4>
+        <p class="mb-0">
+          Inserisci la tua email e ti invieremo le istruzioni per reimpostare la password
+        </p>
+      </VCardText>
 
-    <VCol
-      cols="12"
-      md="4"
-      class="d-flex align-center justify-center"
-    >
-      <VCard
-        flat
-        :max-width="500"
-        class="mt-12 mt-sm-0 pa-4"
-      >
-        <VCardText v-if="!isEmailSent">
-          <h4 class="text-h4 mb-1">
-            Password dimenticata?
-          </h4>
+      <VCardText v-if="isEmailSent">
+        <VAlert
+          type="success"
+          variant="tonal"
+          class="mb-4"
+        >
+          <VAlertTitle>Email inviata</VAlertTitle>
           <p class="mb-0">
-            Inserisci la tua email e ti invieremo le istruzioni per reimpostare la password
+            Se l'indirizzo <strong>{{ email }}</strong> è associato a un account, riceverai un'email con le istruzioni per reimpostare la password.
           </p>
-        </VCardText>
+        </VAlert>
+      </VCardText>
 
-        <VCardText v-if="isEmailSent">
-          <VAlert
-            type="success"
-            variant="tonal"
-            class="mb-4"
-          >
-            <VAlertTitle>Email inviata</VAlertTitle>
-            <p class="mb-0">
-              Se l'indirizzo <strong>{{ email }}</strong> è associato a un account, riceverai un'email con le istruzioni per reimpostare la password.
-            </p>
-          </VAlert>
-        </VCardText>
-
-        <VCardText v-if="!isEmailSent">
-          <VForm
-            ref="refVForm"
-            @submit.prevent="onSubmit"
-          >
-            <VRow>
-              <VCol cols="12">
-                <AppTextField
-                  v-model="email"
-                  autofocus
-                  label="Email"
-                  type="email"
-                  placeholder="nome@azienda.it"
-                  :rules="[requiredValidator, emailValidator]"
-                  :error-messages="errorMessage"
-                />
-              </VCol>
-
-              <VCol cols="12">
-                <VBtn
-                  block
-                  type="submit"
-                  :loading="isLoading"
-                >
-                  Invia link di recupero
-                </VBtn>
-              </VCol>
-
-              <VCol cols="12">
-                <RouterLink
-                  class="d-flex align-center justify-center"
-                  :to="{ name: 'login' }"
-                >
-                  <VIcon
-                    icon="tabler-chevron-left"
-                    size="20"
-                    class="me-1 flip-in-rtl"
-                  />
-                  <span>Torna al login</span>
-                </RouterLink>
-              </VCol>
-            </VRow>
-          </VForm>
-        </VCardText>
-
-        <VCardText v-if="isEmailSent">
+      <VCardText v-if="!isEmailSent">
+        <VForm
+          ref="refVForm"
+          @submit.prevent="onSubmit"
+        >
           <VRow>
+            <VCol cols="12">
+              <AppTextField
+                v-model="email"
+                autofocus
+                label="Email"
+                type="email"
+                placeholder="nome@azienda.it"
+                :rules="[requiredValidator, emailValidator]"
+                :error-messages="errorMessage"
+              />
+            </VCol>
+
             <VCol cols="12">
               <VBtn
                 block
-                variant="outlined"
-                @click="isEmailSent = false"
+                type="submit"
+                :loading="isLoading"
               >
-                Invia di nuovo
+                Invia link di recupero
               </VBtn>
             </VCol>
 
@@ -200,12 +129,40 @@ const onSubmit = () => {
               </RouterLink>
             </VCol>
           </VRow>
-        </VCardText>
-      </VCard>
-    </VCol>
-  </VRow>
+        </VForm>
+      </VCardText>
+
+      <VCardText v-if="isEmailSent">
+        <VRow>
+          <VCol cols="12">
+            <VBtn
+              block
+              variant="outlined"
+              @click="isEmailSent = false"
+            >
+              Invia di nuovo
+            </VBtn>
+          </VCol>
+
+          <VCol cols="12">
+            <RouterLink
+              class="d-flex align-center justify-center"
+              :to="{ name: 'login' }"
+            >
+              <VIcon
+                icon="tabler-chevron-left"
+                size="20"
+                class="me-1 flip-in-rtl"
+              />
+              <span>Torna al login</span>
+            </RouterLink>
+          </VCol>
+        </VRow>
+      </VCardText>
+    </VCard>
+  </div>
 </template>
 
 <style lang="scss">
-@use "@core/scss/template/pages/page-auth.scss";
+@use "@core/scss/template/pages/page-auth";
 </style>
