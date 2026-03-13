@@ -19,10 +19,11 @@ declare module 'vue-router/auto-routes' {
    */
   export interface RouteNamedMap {
     '$error': RouteRecordInfo<'$error', '/:error(.*)', { error: ParamValue<true> }, { error: ParamValue<false> }>,
+    'auth-microsoft-callback': RouteRecordInfo<'auth-microsoft-callback', '/auth/microsoft-callback', Record<never, never>, Record<never, never>>,
     'dashboard': RouteRecordInfo<'dashboard', '/dashboard', Record<never, never>, Record<never, never>>,
     'forgot-password': RouteRecordInfo<'forgot-password', '/forgot-password', Record<never, never>, Record<never, never>>,
     'login': RouteRecordInfo<'login', '/login', Record<never, never>, Record<never, never>>,
     'not-authorized': RouteRecordInfo<'not-authorized', '/not-authorized', Record<never, never>, Record<never, never>>,
-    'register': RouteRecordInfo<'register', '/register', Record<never, never>, Record<never, never>>,
+    'reset-password': RouteRecordInfo<'reset-password', '/reset-password', Record<never, never>, Record<never, never>>,
   }
 }
