@@ -22,18 +22,11 @@ onMounted(async () => {
     const parsedUserData = JSON.parse(decodeURIComponent(userData as string))
     const parsedRules = JSON.parse(decodeURIComponent(userAbilityRules as string))
 
-    console.log('Microsoft callback - parsedUserData:', parsedUserData)
-    console.log('Microsoft callback - parsedRules:', parsedRules)
-    console.log('Microsoft callback - accessToken length:', (accessToken as string).length)
-
     useCookie('accessToken').value = decodeURIComponent(accessToken as string)
     useCookie('userData').value = parsedUserData
     useCookie('userAbilityRules').value = parsedRules
 
     ability.update(parsedRules)
-
-    console.log('Microsoft callback - ability updated, can read dashboard:', ability.can('read', 'dashboard'))
-    console.log('Microsoft callback - cookies set, redirecting...')
 
     await nextTick(() => {
       router.replace(returnUrl ? decodeURIComponent(returnUrl as string) : '/')
