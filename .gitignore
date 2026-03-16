@@ -18,6 +18,9 @@ x86/
 *.nupkg
 **/[Pp]ackages/build/
 
+# Secrets / local dev settings
+**/appsettings.Development.json
+
 # Misc
 *.log
 *.tmp
