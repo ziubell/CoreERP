@@ -210,7 +210,10 @@ public class AuthController : ControllerBase
 
             if (!tokenResponse.IsSuccessStatusCode)
             {
-                _logger.LogError("Microsoft token exchange fallito: {Status}", tokenResponse.StatusCode);
+                var errorBody = await tokenResponse.Content.ReadAsStringAsync();
+                _logger.LogError("Microsoft token exchange fallito: {Status} - {Body}", tokenResponse.StatusCode, errorBody);
+                _logger.LogError("ClientId usato: {ClientId}, ClientSecret length: {Len}, TenantId: {TenantId}",
+                    clientId, clientSecret?.Length ?? 0, tenantId);
                 return Redirect($"/?error=microsoft_auth_failed");
             }
 
