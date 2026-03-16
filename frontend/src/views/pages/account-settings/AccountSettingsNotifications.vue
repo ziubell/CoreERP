@@ -1,37 +1,92 @@
 <script setup lang="ts">
+import type { PreferenzaNotificaApi, TipoNotificaApi } from '@/types/notifiche'
+import { useNotificheStore } from '@/stores/notifiche'
+import { $api } from '@/utils/api'
+
+const store = useNotificheStore()
 const snackbar = ref({ show: false, message: '', color: 'success' })
+const loading = ref(true)
+const saving = ref(false)
 
-const notifications = ref([
-  {
-    type: 'Nuovi aggiornamenti',
-    email: true,
-    browser: true,
-    app: true,
-  },
-  {
-    type: 'Attivita\u0300 account',
-    email: true,
-    browser: false,
-    app: false,
-  },
-  {
-    type: 'Nuovo accesso da browser',
-    email: true,
-    browser: true,
-    app: true,
-  },
-  {
-    type: 'Nuovo dispositivo collegato',
-    email: true,
-    browser: false,
-    app: true,
-  },
-])
+// Check if user has Microsoft linked (from profile/cookie)
+const hasMicrosoft = ref(false)
 
-const notificationTiming = ref('online')
+interface PreferenzaRow {
+  tipoNotificaId: number
+  codice: string
+  modulo: string
+  descrizione: string
+  email: boolean
+  browser: boolean
+  teams: boolean
+}
 
-const saveNotifications = () => {
-  showSnackbar('Preferenze notifiche salvate.', 'success')
+const preferenzeRows = ref<PreferenzaRow[]>([])
+
+// Group by module
+const moduliRaggruppati = computed(() => {
+  const grouped: Record<string, PreferenzaRow[]> = {}
+  for (const row of preferenzeRows.value) {
+    if (!grouped[row.modulo])
+      grouped[row.modulo] = []
+    grouped[row.modulo].push(row)
+  }
+  return grouped
+})
+
+onMounted(async () => {
+  try {
+    // Check if user has Microsoft account linked
+    try {
+      const profile = await $api<{ microsoftId?: string }>('/profile')
+      hasMicrosoft.value = !!profile.microsoftId
+    }
+    catch {
+      hasMicrosoft.value = false
+    }
+
+    await Promise.all([
+      store.fetchTipiNotifica(),
+      store.fetchPreferenze(),
+    ])
+
+    // Build rows from notification types + user preferences
+    preferenzeRows.value = store.tipiNotifica.map(tipo => {
+      const pref = store.preferenze.find(p => p.tipoNotificaId === tipo.id)
+      return {
+        tipoNotificaId: tipo.id,
+        codice: tipo.codice,
+        modulo: tipo.modulo,
+        descrizione: tipo.descrizione,
+        email: pref?.email ?? true,
+        browser: pref?.browser ?? true,
+        teams: pref?.teams ?? false,
+      }
+    })
+  }
+  finally {
+    loading.value = false
+  }
+})
+
+const saveNotifications = async () => {
+  saving.value = true
+  try {
+    const prefs: PreferenzaNotificaApi[] = preferenzeRows.value.map(row => ({
+      tipoNotificaId: row.tipoNotificaId,
+      email: row.email,
+      browser: row.browser,
+      teams: row.teams,
+    }))
+    await store.salvaPreferenze(prefs)
+    showSnackbar('Preferenze notifiche salvate.', 'success')
+  }
+  catch {
+    showSnackbar('Errore nel salvataggio delle preferenze.', 'error')
+  }
+  finally {
+    saving.value = false
+  }
 }
 
 const showSnackbar = (message: string, color: string) => {
@@ -44,99 +99,105 @@ const showSnackbar = (message: string, color: string) => {
     <VCol cols="12">
       <VCard title="Notifiche">
         <VCardText>
-          <VTable class="text-no-wrap">
-            <thead>
-              <tr>
-                <th scope="col">
-                  Tipo
-                </th>
-                <th
-                  scope="col"
-                  class="text-center"
-                >
-                  Email
-                </th>
-                <th
-                  scope="col"
-                  class="text-center"
-                >
-                  Browser
-                </th>
-                <th
-                  scope="col"
-                  class="text-center"
-                >
-                  App
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="(item, index) in notifications"
-                :key="index"
-              >
-                <td>{{ item.type }}</td>
-                <td class="text-center">
-                  <VCheckbox
-                    v-model="item.email"
-                    density="compact"
-                    hide-details
-                    class="d-inline-flex"
-                  />
-                </td>
-                <td class="text-center">
-                  <VCheckbox
-                    v-model="item.browser"
-                    density="compact"
-                    hide-details
-                    class="d-inline-flex"
-                  />
-                </td>
-                <td class="text-center">
-                  <VCheckbox
-                    v-model="item.app"
-                    density="compact"
-                    hide-details
-                    class="d-inline-flex"
-                  />
-                </td>
-              </tr>
-            </tbody>
-          </VTable>
+          <div
+            v-if="loading"
+            class="d-flex justify-center pa-4"
+          >
+            <VProgressCircular indeterminate />
+          </div>
+
+          <template v-else-if="preferenzeRows.length > 0">
+            <template
+              v-for="(rows, modulo) in moduliRaggruppati"
+              :key="modulo"
+            >
+              <h6 class="text-h6 mb-3 mt-4">
+                {{ modulo }}
+              </h6>
+
+              <VTable class="text-no-wrap mb-4">
+                <thead>
+                  <tr>
+                    <th scope="col">
+                      Tipo
+                    </th>
+                    <th
+                      scope="col"
+                      class="text-center"
+                    >
+                      Email
+                    </th>
+                    <th
+                      scope="col"
+                      class="text-center"
+                    >
+                      Browser
+                    </th>
+                    <th
+                      v-if="hasMicrosoft"
+                      scope="col"
+                      class="text-center"
+                    >
+                      Teams
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="row in rows"
+                    :key="row.tipoNotificaId"
+                  >
+                    <td>{{ row.descrizione }}</td>
+                    <td class="text-center">
+                      <VCheckbox
+                        v-model="row.email"
+                        density="compact"
+                        hide-details
+                        class="d-inline-flex"
+                      />
+                    </td>
+                    <td class="text-center">
+                      <VCheckbox
+                        v-model="row.browser"
+                        density="compact"
+                        hide-details
+                        class="d-inline-flex"
+                      />
+                    </td>
+                    <td
+                      v-if="hasMicrosoft"
+                      class="text-center"
+                    >
+                      <VCheckbox
+                        v-model="row.teams"
+                        density="compact"
+                        hide-details
+                        class="d-inline-flex"
+                      />
+                    </td>
+                  </tr>
+                </tbody>
+              </VTable>
+            </template>
+          </template>
+
+          <p
+            v-else
+            class="text-medium-emphasis pa-4"
+          >
+            Nessun tipo di notifica disponibile.
+          </p>
         </VCardText>
 
         <VDivider />
 
         <VCardText>
-          <h6 class="text-h6 mb-4">
-            Quando inviare le notifiche?
-          </h6>
-
-          <VRadioGroup
-            v-model="notificationTiming"
-            inline
-          >
-            <VRadio
-              label="Solo quando sono online"
-              value="online"
-            />
-            <VRadio
-              label="In qualsiasi momento"
-              value="anytime"
-            />
-          </VRadioGroup>
-        </VCardText>
-
-        <VCardText>
           <div class="d-flex gap-4">
-            <VBtn @click="saveNotifications">
-              Salva modifiche
-            </VBtn>
             <VBtn
-              variant="tonal"
-              color="secondary"
+              :loading="saving"
+              @click="saveNotifications"
             >
-              Annulla
+              Salva modifiche
             </VBtn>
           </div>
         </VCardText>

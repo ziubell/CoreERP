@@ -9,6 +9,7 @@ namespace CoreERP.Infrastructure.Email;
 public interface IEmailService
 {
     Task SendPasswordResetEmailAsync(string toEmail, string resetLink);
+    Task SendNotificaEmailAsync(string toEmail, string titolo, string? messaggio, string? link, string? mittenteNome);
 }
 
 public class SmtpEmailService : IEmailService
@@ -41,6 +42,38 @@ public class SmtpEmailService : IEmailService
     </p>
     <p style=""color: #666; font-size: 14px;"">Se non hai richiesto tu il reset della password, puoi ignorare questa email.</p>
     <p style=""color: #666; font-size: 14px;"">Il link scadrà tra 24 ore.</p>
+    <hr style=""border: none; border-top: 1px solid #eee; margin: 20px 0;"">
+    <p style=""color: #999; font-size: 12px;"">CoreERP - Spadhausen</p>
+</body>
+</html>";
+
+        await SendEmailAsync(toEmail, subject, body);
+    }
+
+    public async Task SendNotificaEmailAsync(string toEmail, string titolo, string? messaggio, string? link, string? mittenteNome)
+    {
+        var subject = $"CoreERP - {titolo}";
+        var senderInfo = mittenteNome is not null
+            ? $"<p style=\"color: #555; font-size: 14px;\">Da: <strong>{mittenteNome}</strong></p>"
+            : "";
+        var linkButton = link is not null
+            ? $@"<p style=""text-align: center; margin: 30px 0;"">
+                <a href=""{link}""
+                   style=""background-color: #16B1FF; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;"">
+                    Apri in CoreERP
+                </a>
+            </p>"
+            : "";
+
+        var body = $@"
+<!DOCTYPE html>
+<html>
+<head><meta charset=""utf-8""></head>
+<body style=""font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;"">
+    <h2 style=""color: #333;"">{titolo}</h2>
+    {senderInfo}
+    {(messaggio is not null ? $"<p>{messaggio}</p>" : "")}
+    {linkButton}
     <hr style=""border: none; border-top: 1px solid #eee; margin: 20px 0;"">
     <p style=""color: #999; font-size: 12px;"">CoreERP - Spadhausen</p>
 </body>

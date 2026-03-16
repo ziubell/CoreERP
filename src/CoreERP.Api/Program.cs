@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using CoreERP.Api.Middleware;
 using CoreERP.Infrastructure;
+using CoreERP.Infrastructure.Hubs;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -60,6 +61,18 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = builder.Configuration["Jwt:Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? "CoreERP-Development-Key-Change-In-Production-!"))
+    };
+
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/notifiche"))
+                context.Token = accessToken;
+            return Task.CompletedTask;
+        }
     };
 });
 
@@ -162,6 +175,7 @@ app.UseSerilogRequestLogging();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<NotificaHub>("/hubs/notifiche");
 app.MapHealthChecks("/health");
 
 app.Run();
