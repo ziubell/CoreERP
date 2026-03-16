@@ -58,14 +58,20 @@ const login = async () => {
         password: credentials.value.password,
       },
       onResponseError({ response }) {
-        errors.value = response._data.errors
+        console.error('Login response error:', response.status, response._data)
+        if (response._data?.errors) {
+          errors.value = response._data.errors
+        }
+        else if (response._data?.message) {
+          errors.value = { email: response._data.message }
+        }
       },
     })
 
     await handleLoginSuccess(res)
   }
-  catch (err) {
-    console.error(err)
+  catch (err: any) {
+    console.error('Login error:', err?.data || err?.message || err)
   }
   finally {
     isLoading.value = false
@@ -102,18 +108,13 @@ const onSubmit = () => {
     >
       <VCardItem class="justify-center">
         <RouterLink to="/">
-          <div class="d-flex align-center gap-x-3">
-            <img src="@/assets/images/logos/logo_bianco.png" alt="Spadhausen" style="height: 28px; width: auto;">
-            <h1 class="auth-title">
-              {{ themeConfig.app.title }}
-            </h1>
-          </div>
+          <img src="@/assets/images/logos/logo_bianco.png" alt="Logo" style="height: 36px; width: auto;">
         </RouterLink>
       </VCardItem>
 
       <VCardText class="pt-2">
         <h4 class="text-h4 mb-1">
-          Benvenuto in {{ themeConfig.app.title }}
+          Benvenuto
         </h4>
         <p class="mb-0">
           Accedi al tuo account per continuare

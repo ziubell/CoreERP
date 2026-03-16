@@ -30,6 +30,24 @@ public class AuthController : ControllerBase
         _logger = logger;
     }
 
+    /// <summary>
+    /// Diagnostica: verifica che API e DB siano raggiungibili
+    /// </summary>
+    [HttpGet("ping")]
+    public async Task<IActionResult> Ping()
+    {
+        try
+        {
+            // Test DB connection
+            var user = await _userManager.FindByEmailAsync("test@test.com");
+            return Ok(new { status = "ok", db = "connected", userFound = user is not null, timestamp = DateTime.UtcNow });
+        }
+        catch (Exception ex)
+        {
+            return Ok(new { status = "error", db = "failed", error = ex.Message, timestamp = DateTime.UtcNow });
+        }
+    }
+
     [HttpPost("login")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

@@ -78,12 +78,7 @@ const goToLogin = () => {
     >
       <VCardItem class="justify-center">
         <RouterLink to="/">
-          <div class="d-flex align-center gap-x-3">
-            <img src="@/assets/images/logos/logo_bianco.png" alt="Spadhausen" style="height: 28px; width: auto;">
-            <h1 class="auth-title">
-              {{ themeConfig.app.title }}
-            </h1>
-          </div>
+          <img src="@/assets/images/logos/logo_bianco.png" alt="Logo" style="height: 36px; width: auto;">
         </RouterLink>
       </VCardItem>
 
