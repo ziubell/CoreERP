@@ -51,7 +51,7 @@ public static class DatabaseSeeder
                 Cellulare = "+39 333 1234567",
                 Dipendente = true,
                 Reperibile = true,
-                CodiceAgente = "AG001",
+                CodiceAgente = (string?)"AG001",
                 Foto = (string?)null,
                 Password = "Admin123!"
             },
@@ -64,7 +64,7 @@ public static class DatabaseSeeder
                 Cellulare = "+39 338 7654321",
                 Dipendente = true,
                 Reperibile = false,
-                CodiceAgente = "AG002",
+                CodiceAgente = (string?)"AG002",
                 Foto = (string?)null,
                 Password = "User1234!"
             },
