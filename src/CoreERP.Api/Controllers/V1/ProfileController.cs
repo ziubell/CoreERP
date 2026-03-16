@@ -1,4 +1,6 @@
+using System.Net.Http.Headers;
 using System.Security.Claims;
+using System.Text.Json.Serialization;
 using CoreERP.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -13,15 +15,18 @@ public class ProfileController : ControllerBase
 {
     private readonly UserManager<ApplicationIdentityUser> _userManager;
     private readonly IWebHostEnvironment _environment;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<ProfileController> _logger;
 
     public ProfileController(
         UserManager<ApplicationIdentityUser> userManager,
         IWebHostEnvironment environment,
+        IConfiguration configuration,
         ILogger<ProfileController> logger)
     {
         _userManager = userManager;
         _environment = environment;
+        _configuration = configuration;
         _logger = logger;
     }
 
@@ -53,6 +58,9 @@ public class ProfileController : ControllerBase
             CodiceAgente = user.CodiceAgente ?? "",
             DataLogin = user.DataLogin,
             DataUltimoLogin = user.DataUltimoLogin,
+            MicrosoftLinked = !string.IsNullOrEmpty(user.MicrosoftId),
+            MicrosoftEmail = user.MicrosoftEmail,
+            DataCollegamentoMicrosoft = user.DataCollegamentoMicrosoft,
         });
     }
 
@@ -244,6 +252,159 @@ public class ProfileController : ControllerBase
         return Ok(new { message = "Password aggiornata con successo." });
     }
 
+    /// <summary>
+    /// Get Microsoft account link status
+    /// </summary>
+    [HttpGet("microsoft-status")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetMicrosoftStatus()
+    {
+        var user = await GetCurrentUser();
+        if (user is null)
+            return Unauthorized();
+
+        var hasPassword = await _userManager.HasPasswordAsync(user);
+
+        return Ok(new MicrosoftStatusResponse
+        {
+            IsLinked = !string.IsNullOrEmpty(user.MicrosoftId),
+            MicrosoftEmail = user.MicrosoftEmail,
+            DataCollegamento = user.DataCollegamentoMicrosoft,
+            HasPassword = hasPassword,
+        });
+    }
+
+    /// <summary>
+    /// Start Microsoft account linking flow
+    /// </summary>
+    [HttpGet("microsoft-link")]
+    [ProducesResponseType(StatusCodes.Status302Found)]
+    public IActionResult MicrosoftLink()
+    {
+        var clientId = _configuration["AzureAd:ClientId"];
+        if (string.IsNullOrEmpty(clientId))
+            return BadRequest(new { message = "Autenticazione Microsoft non configurata." });
+
+        var tenantId = _configuration["AzureAd:TenantId"];
+        var redirectUri = $"{Request.Scheme}://{Request.Host}/api/profile/microsoft-link-callback";
+        var scope = "openid profile email User.Read";
+
+        var authUrl = $"https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/authorize" +
+            $"?client_id={clientId}" +
+            $"&response_type=code" +
+            $"&redirect_uri={Uri.EscapeDataString(redirectUri)}" +
+            $"&scope={Uri.EscapeDataString(scope)}" +
+            $"&response_mode=query";
+
+        return Redirect(authUrl);
+    }
+
+    /// <summary>
+    /// Microsoft account linking callback
+    /// </summary>
+    [HttpGet("microsoft-link-callback")]
+    [ProducesResponseType(StatusCodes.Status302Found)]
+    public async Task<IActionResult> MicrosoftLinkCallback([FromQuery] string code)
+    {
+        var user = await GetCurrentUser();
+        if (user is null)
+            return Redirect("/account-settings?tab=security&microsoft=auth_required");
+
+        var clientId = _configuration["AzureAd:ClientId"];
+        var clientSecret = _configuration["AzureAd:ClientSecret"];
+        var tenantId = _configuration["AzureAd:TenantId"];
+        var redirectUri = $"{Request.Scheme}://{Request.Host}/api/profile/microsoft-link-callback";
+
+        try
+        {
+            using var httpClient = new HttpClient();
+            var tokenResponse = await httpClient.PostAsync(
+                $"https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/token",
+                new FormUrlEncodedContent(new Dictionary<string, string>
+                {
+                    ["client_id"] = clientId!,
+                    ["client_secret"] = clientSecret!,
+                    ["code"] = code,
+                    ["redirect_uri"] = redirectUri,
+                    ["grant_type"] = "authorization_code",
+                    ["scope"] = "openid profile email User.Read",
+                }));
+
+            if (!tokenResponse.IsSuccessStatusCode)
+            {
+                _logger.LogError("Microsoft token exchange fallito durante linking");
+                return Redirect("/account-settings?tab=security&microsoft=link_failed");
+            }
+
+            var tokenData = await tokenResponse.Content.ReadFromJsonAsync<MicrosoftTokenResponse>();
+
+            // Get Microsoft profile via Graph API
+            httpClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", tokenData!.AccessToken);
+
+            var graphUser = await httpClient.GetFromJsonAsync<MicrosoftGraphUser>(
+                "https://graph.microsoft.com/v1.0/me");
+
+            if (graphUser is null || string.IsNullOrEmpty(graphUser.Id))
+            {
+                return Redirect("/account-settings?tab=security&microsoft=link_failed");
+            }
+
+            // Check if this Microsoft account is already linked to another user
+            var existingUser = _userManager.Users.FirstOrDefault(u => u.MicrosoftId == graphUser.Id && u.Id != user.Id);
+            if (existingUser is not null)
+            {
+                _logger.LogWarning("Account Microsoft già collegato a un altro utente: {MsId}", graphUser.Id);
+                return Redirect("/account-settings?tab=security&microsoft=already_linked_other");
+            }
+
+            // Link Microsoft account
+            user.MicrosoftId = graphUser.Id;
+            user.MicrosoftEmail = graphUser.Mail ?? graphUser.UserPrincipalName;
+            user.DataCollegamentoMicrosoft = DateTime.UtcNow;
+            await _userManager.UpdateAsync(user);
+
+            _logger.LogInformation("Account Microsoft collegato per: {Email}", user.Email);
+
+            return Redirect("/account-settings?tab=security&microsoft=linked");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Errore durante linking Microsoft");
+            return Redirect("/account-settings?tab=security&microsoft=link_failed");
+        }
+    }
+
+    /// <summary>
+    /// Unlink Microsoft account
+    /// </summary>
+    [HttpDelete("microsoft-link")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> UnlinkMicrosoft()
+    {
+        var user = await GetCurrentUser();
+        if (user is null)
+            return Unauthorized();
+
+        if (string.IsNullOrEmpty(user.MicrosoftId))
+            return BadRequest(new { message = "Nessun account Microsoft collegato." });
+
+        // Verify user has a password before unlinking
+        var hasPassword = await _userManager.HasPasswordAsync(user);
+        if (!hasPassword)
+            return BadRequest(new { message = "Devi prima impostare una password prima di scollegare l'account Microsoft." });
+
+        user.MicrosoftId = null;
+        user.MicrosoftEmail = null;
+        user.DataCollegamentoMicrosoft = null;
+        await _userManager.UpdateAsync(user);
+
+        _logger.LogInformation("Account Microsoft scollegato per: {Email}", user.Email);
+
+        return Ok(new { message = "Account Microsoft scollegato con successo." });
+    }
+
     private async Task<ApplicationIdentityUser?> GetCurrentUser()
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -269,6 +430,17 @@ public class ProfileResponse
     public string CodiceAgente { get; set; } = "";
     public DateTime? DataLogin { get; set; }
     public DateTime? DataUltimoLogin { get; set; }
+    public bool MicrosoftLinked { get; set; }
+    public string? MicrosoftEmail { get; set; }
+    public DateTime? DataCollegamentoMicrosoft { get; set; }
+}
+
+public class MicrosoftStatusResponse
+{
+    public bool IsLinked { get; set; }
+    public string? MicrosoftEmail { get; set; }
+    public DateTime? DataCollegamento { get; set; }
+    public bool HasPassword { get; set; }
 }
 
 public record UpdateProfileRequest

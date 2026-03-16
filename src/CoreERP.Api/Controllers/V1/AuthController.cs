@@ -1,10 +1,12 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
 using CoreERP.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 namespace CoreERP.Api.Controllers.V1;
@@ -214,26 +216,77 @@ public class AuthController : ControllerBase
 
             var tokenData = await tokenResponse.Content.ReadFromJsonAsync<MicrosoftTokenResponse>();
 
-            // Decode ID token to get user info
-            var handler = new JwtSecurityTokenHandler();
-            var jwt = handler.ReadJwtToken(tokenData!.IdToken);
+            // Call Microsoft Graph API to get full user profile
+            httpClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", tokenData!.AccessToken);
 
-            var email = jwt.Claims.FirstOrDefault(c => c.Type == "email" || c.Type == "preferred_username")?.Value;
-            var name = jwt.Claims.FirstOrDefault(c => c.Type == "name")?.Value;
+            var graphUser = await httpClient.GetFromJsonAsync<MicrosoftGraphUser>(
+                "https://graph.microsoft.com/v1.0/me");
+
+            if (graphUser is null)
+            {
+                _logger.LogError("Impossibile ottenere profilo da Microsoft Graph");
+                return Redirect($"/?error=microsoft_auth_failed");
+            }
+
+            var microsoftId = graphUser.Id;
+            var email = graphUser.Mail ?? graphUser.UserPrincipalName;
+            var givenName = graphUser.GivenName;
+            var surname = graphUser.Surname;
 
             if (string.IsNullOrEmpty(email))
             {
-                _logger.LogError("Email non trovata nel token Microsoft");
+                _logger.LogError("Email non trovata nel profilo Microsoft Graph");
                 return Redirect($"/?error=microsoft_no_email");
             }
 
-            // Find or create user
-            var user = await _userManager.FindByEmailAsync(email);
+            // 1. Search by MicrosoftId (already linked)
+            var user = _userManager.Users.FirstOrDefault(u => u.MicrosoftId == microsoftId);
 
+            // 2. Search by email (auto-link)
             if (user is null)
             {
-                _logger.LogWarning("Tentativo login Microsoft con email non registrata: {Email}", email);
-                return Redirect($"/?error=microsoft_user_not_found");
+                user = await _userManager.FindByEmailAsync(email);
+                if (user is not null)
+                {
+                    // Auto-link: email matches existing account
+                    user.MicrosoftId = microsoftId;
+                    user.MicrosoftEmail = email;
+                    user.DataCollegamentoMicrosoft = DateTime.UtcNow;
+                    _logger.LogInformation("Account Microsoft collegato automaticamente per: {Email}", email);
+                }
+            }
+
+            // 3. No match: auto-register new user
+            if (user is null)
+            {
+                _logger.LogInformation("Auto-registrazione nuovo utente da Microsoft: {Email}", email);
+
+                user = new ApplicationIdentityUser
+                {
+                    UserName = email,
+                    Email = email,
+                    EmailConfirmed = true,
+                    Nome = givenName,
+                    Cognome = surname,
+                    Ruolo = "user",
+                    MicrosoftId = microsoftId,
+                    MicrosoftEmail = email,
+                    DataCollegamentoMicrosoft = DateTime.UtcNow,
+                };
+
+                var createResult = await _userManager.CreateAsync(user);
+                if (!createResult.Succeeded)
+                {
+                    var errors = string.Join(", ", createResult.Errors.Select(e => e.Description));
+                    _logger.LogError("Errore creazione utente Microsoft: {Errors}", errors);
+                    return Redirect($"/?error=microsoft_registration_failed");
+                }
+
+                await _userManager.AddToRoleAsync(user, "user");
+
+                // Try to download Microsoft profile photo
+                await TryDownloadMicrosoftPhoto(httpClient, user);
             }
 
             // Update login timestamps
@@ -256,6 +309,35 @@ public class AuthController : ControllerBase
         {
             _logger.LogError(ex, "Errore durante callback Microsoft OAuth");
             return Redirect($"/?error=microsoft_auth_error");
+        }
+    }
+
+    private async Task TryDownloadMicrosoftPhoto(HttpClient httpClient, ApplicationIdentityUser user)
+    {
+        try
+        {
+            var photoResponse = await httpClient.GetAsync("https://graph.microsoft.com/v1.0/me/photo/$value");
+            if (!photoResponse.IsSuccessStatusCode)
+                return;
+
+            var photoBytes = await photoResponse.Content.ReadAsByteArrayAsync();
+            if (photoBytes.Length == 0)
+                return;
+
+            var uploadsDir = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "avatars");
+            if (!Directory.Exists(uploadsDir))
+                Directory.CreateDirectory(uploadsDir);
+
+            var fileName = $"{user.Id}_{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}.jpg";
+            var filePath = Path.Combine(uploadsDir, fileName);
+            await System.IO.File.WriteAllBytesAsync(filePath, photoBytes);
+
+            user.Foto = $"/uploads/avatars/{fileName}";
+            _logger.LogInformation("Foto Microsoft scaricata per: {Email}", user.Email);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Impossibile scaricare foto Microsoft per: {Email}", user.Email);
         }
     }
 
@@ -385,4 +467,31 @@ public class MicrosoftTokenResponse
 
     [JsonPropertyName("expires_in")]
     public int ExpiresIn { get; set; }
+}
+
+public class MicrosoftGraphUser
+{
+    [JsonPropertyName("id")]
+    public string? Id { get; set; }
+
+    [JsonPropertyName("givenName")]
+    public string? GivenName { get; set; }
+
+    [JsonPropertyName("surname")]
+    public string? Surname { get; set; }
+
+    [JsonPropertyName("displayName")]
+    public string? DisplayName { get; set; }
+
+    [JsonPropertyName("mail")]
+    public string? Mail { get; set; }
+
+    [JsonPropertyName("userPrincipalName")]
+    public string? UserPrincipalName { get; set; }
+
+    [JsonPropertyName("mobilePhone")]
+    public string? MobilePhone { get; set; }
+
+    [JsonPropertyName("jobTitle")]
+    public string? JobTitle { get; set; }
 }
