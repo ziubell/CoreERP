@@ -7,6 +7,22 @@ const ability = useAbility()
 // TODO: Get type from backend
 const userData = useCookie<any>('userData')
 
+const initials = computed(() => {
+  if (!userData.value)
+    return '?'
+
+  const fullName = userData.value.fullName ?? ''
+  const parts = fullName.trim().split(/\s+/)
+
+  if (parts.length >= 2)
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+
+  if (parts.length === 1 && parts[0])
+    return parts[0][0].toUpperCase()
+
+  return '?'
+})
+
 const logout = async () => {
   // Remove "accessToken" from cookie
   useCookie('accessToken').value = null
@@ -17,7 +33,6 @@ const logout = async () => {
   // Redirect to login page
   await router.push('/login')
 
-  // ℹ️ We had to remove abilities in then block because if we don't nav menu items mutation is visible while redirecting user to login page
   // Remove "userAbilities" from cookie
   useCookie('userAbilityRules').value = null
 
@@ -27,7 +42,18 @@ const logout = async () => {
 
 const userProfileList = [
   { type: 'divider' },
-  { type: 'navItem', icon: 'tabler-smart-home', title: 'Dashboard', to: { name: 'dashboard' } },
+  {
+    type: 'navItem',
+    icon: 'tabler-user-cog',
+    title: 'Profilo',
+    to: { name: 'account-settings' },
+  },
+  {
+    type: 'navItem',
+    icon: 'tabler-smart-home',
+    title: 'Dashboard',
+    to: { name: 'dashboard' },
+  },
 ]
 </script>
 
@@ -51,10 +77,12 @@ const userProfileList = [
         v-if="userData && userData.avatar"
         :src="userData.avatar"
       />
-      <VIcon
+      <span
         v-else
-        icon="tabler-user"
-      />
+        class="text-sm font-weight-medium"
+      >
+        {{ initials }}
+      </span>
 
       <!-- SECTION Menu -->
       <VMenu
@@ -83,10 +111,12 @@ const userProfileList = [
                       v-if="userData && userData.avatar"
                       :src="userData.avatar"
                     />
-                    <VIcon
+                    <span
                       v-else
-                      icon="tabler-user"
-                    />
+                      class="text-sm font-weight-medium"
+                    >
+                      {{ initials }}
+                    </span>
                   </VAvatar>
                 </VBadge>
               </VListItemAction>
