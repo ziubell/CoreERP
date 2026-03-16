@@ -29,7 +29,7 @@ public static class DatabaseSeeder
         }
 
         // Seed roles
-        string[] roles = new[] { "admin", "user", "manager", "tecnico" };
+        string[] roles = new[] { "admin"};
         foreach (var role in roles)
         {
             if (!await roleManager.RoleExistsAsync(role))
@@ -44,56 +44,17 @@ public static class DatabaseSeeder
         {
             new
             {
-                Email = "admin@coreerp.it",
-                Nome = "Marco",
-                Cognome = "Rossi",
+                Email = "pietro.bello@spadhausen.com",
+                Nome = "Pietro",
+                Cognome = "Bello",
                 Ruolo = "admin",
-                Cellulare = "+39 333 1234567",
+                Cellulare = "+39 366 3804995",
                 Dipendente = true,
                 Reperibile = true,
                 CodiceAgente = "AG001",
                 Foto = (string?)null,
-                Password = "Admin123!"
-            },
-            new
-            {
-                Email = "mario.bianchi@coreerp.it",
-                Nome = "Mario",
-                Cognome = "Bianchi",
-                Ruolo = "manager",
-                Cellulare = "+39 338 7654321",
-                Dipendente = true,
-                Reperibile = false,
-                CodiceAgente = "AG002",
-                Foto = (string?)null,
-                Password = "User1234!"
-            },
-            new
-            {
-                Email = "laura.verdi@coreerp.it",
-                Nome = "Laura",
-                Cognome = "Verdi",
-                Ruolo = "tecnico",
-                Cellulare = "+39 340 1112233",
-                Dipendente = true,
-                Reperibile = true,
-                CodiceAgente = (string?)null,
-                Foto = (string?)null,
-                Password = "User1234!"
-            },
-            new
-            {
-                Email = "giuseppe.neri@coreerp.it",
-                Nome = "Giuseppe",
-                Cognome = "Neri",
-                Ruolo = "user",
-                Cellulare = "+39 347 9988776",
-                Dipendente = false,
-                Reperibile = false,
-                CodiceAgente = (string?)null,
-                Foto = (string?)null,
-                Password = "User1234!"
-            },
+                Password = "Mitico78"
+            }
         };
 
         foreach (var testUser in testUsers)
