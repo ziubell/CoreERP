@@ -183,6 +183,7 @@ public class AuthController : ControllerBase
         var clientId = _configuration["AzureAd:ClientId"];
         var clientSecret = _configuration["AzureAd:ClientSecret"];
         var tenantId = _configuration["AzureAd:TenantId"];
+        var frontendUrl = _configuration["FrontendUrl"] ?? "http://localhost:5173";
         var redirectUri = $"{Request.Scheme}://{Request.Host}/api/auth/microsoft-callback";
 
         var returnUrl = "/";
@@ -214,7 +215,7 @@ public class AuthController : ControllerBase
                 _logger.LogError("Microsoft token exchange fallito: {Status} - {Body}", tokenResponse.StatusCode, errorBody);
                 _logger.LogError("ClientId usato: {ClientId}, ClientSecret length: {Len}, TenantId: {TenantId}",
                     clientId, clientSecret?.Length ?? 0, tenantId);
-                return Redirect($"/login?error=microsoft_auth_failed");
+                return Redirect($"{frontendUrl}/login?error=microsoft_auth_failed");
             }
 
             var tokenData = await tokenResponse.Content.ReadFromJsonAsync<MicrosoftTokenResponse>();
@@ -229,7 +230,7 @@ public class AuthController : ControllerBase
             if (graphUser is null)
             {
                 _logger.LogError("Impossibile ottenere profilo da Microsoft Graph");
-                return Redirect($"/login?error=microsoft_auth_failed");
+                return Redirect($"{frontendUrl}/login?error=microsoft_auth_failed");
             }
 
             var microsoftId = graphUser.Id;
@@ -240,7 +241,7 @@ public class AuthController : ControllerBase
             if (string.IsNullOrEmpty(email))
             {
                 _logger.LogError("Email non trovata nel profilo Microsoft Graph");
-                return Redirect($"/login?error=microsoft_no_email");
+                return Redirect($"{frontendUrl}/login?error=microsoft_no_email");
             }
 
             // 1. Search by MicrosoftId (already linked)
@@ -283,7 +284,7 @@ public class AuthController : ControllerBase
                 {
                     var errors = string.Join(", ", createResult.Errors.Select(e => e.Description));
                     _logger.LogError("Errore creazione utente Microsoft: {Errors}", errors);
-                    return Redirect($"/login?error=microsoft_registration_failed");
+                    return Redirect($"{frontendUrl}/login?error=microsoft_registration_failed");
                 }
 
                 await _userManager.AddToRoleAsync(user, "user");
@@ -311,12 +312,12 @@ public class AuthController : ControllerBase
             var userData = Uri.EscapeDataString(System.Text.Json.JsonSerializer.Serialize(appToken.UserData));
             var abilityRules = Uri.EscapeDataString(System.Text.Json.JsonSerializer.Serialize(appToken.UserAbilityRules));
 
-            return Redirect($"/auth/microsoft-callback?accessToken={accessToken}&userData={userData}&userAbilityRules={abilityRules}&returnUrl={Uri.EscapeDataString(returnUrl)}");
+            return Redirect($"{frontendUrl}/auth/microsoft-callback?accessToken={accessToken}&userData={userData}&userAbilityRules={abilityRules}&returnUrl={Uri.EscapeDataString(returnUrl)}");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Errore durante callback Microsoft OAuth");
-            return Redirect($"/login?error=microsoft_auth_error");
+            return Redirect($"{frontendUrl}/login?error=microsoft_auth_error");
         }
     }
 

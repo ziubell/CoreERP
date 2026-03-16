@@ -307,8 +307,10 @@ public class ProfileController : ControllerBase
     public async Task<IActionResult> MicrosoftLinkCallback([FromQuery] string code)
     {
         var user = await GetCurrentUser();
+        var frontendUrl = _configuration["FrontendUrl"] ?? "http://localhost:5173";
+
         if (user is null)
-            return Redirect("/account-settings?tab=security&microsoft=auth_required");
+            return Redirect($"{frontendUrl}/account-settings?tab=security&microsoft=auth_required");
 
         var clientId = _configuration["AzureAd:ClientId"];
         var clientSecret = _configuration["AzureAd:ClientSecret"];
@@ -333,7 +335,7 @@ public class ProfileController : ControllerBase
             if (!tokenResponse.IsSuccessStatusCode)
             {
                 _logger.LogError("Microsoft token exchange fallito durante linking");
-                return Redirect("/account-settings?tab=security&microsoft=link_failed");
+                return Redirect($"{frontendUrl}/account-settings?tab=security&microsoft=link_failed");
             }
 
             var tokenData = await tokenResponse.Content.ReadFromJsonAsync<MicrosoftTokenResponse>();
@@ -347,7 +349,7 @@ public class ProfileController : ControllerBase
 
             if (graphUser is null || string.IsNullOrEmpty(graphUser.Id))
             {
-                return Redirect("/account-settings?tab=security&microsoft=link_failed");
+                return Redirect($"{frontendUrl}/account-settings?tab=security&microsoft=link_failed");
             }
 
             // Check if this Microsoft account is already linked to another user
@@ -355,7 +357,7 @@ public class ProfileController : ControllerBase
             if (existingUser is not null)
             {
                 _logger.LogWarning("Account Microsoft già collegato a un altro utente: {MsId}", graphUser.Id);
-                return Redirect("/account-settings?tab=security&microsoft=already_linked_other");
+                return Redirect($"{frontendUrl}/account-settings?tab=security&microsoft=already_linked_other");
             }
 
             // Link Microsoft account and save tokens
@@ -369,12 +371,12 @@ public class ProfileController : ControllerBase
 
             _logger.LogInformation("Account Microsoft collegato per: {Email}", user.Email);
 
-            return Redirect("/account-settings?tab=security&microsoft=linked");
+            return Redirect($"{frontendUrl}/account-settings?tab=security&microsoft=linked");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Errore durante linking Microsoft");
-            return Redirect("/account-settings?tab=security&microsoft=link_failed");
+            return Redirect($"{frontendUrl}/account-settings?tab=security&microsoft=link_failed");
         }
     }
 
