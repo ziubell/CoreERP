@@ -16,7 +16,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
     <PackageReference Include="Serilog.AspNetCore" />
     <PackageReference Include="Serilog.Sinks.Console" />
-    <PackageReference Include="MailKit" Version="4.9.0" />
+    <PackageReference Include="MailKit" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CoreERP.Domain\CoreERP.Domain.csproj" />
