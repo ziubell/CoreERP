@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
+using CoreERP.Infrastructure.Email;
 using CoreERP.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -19,17 +20,20 @@ public class AuthController : ControllerBase
     private readonly SignInManager<ApplicationIdentityUser> _signInManager;
     private readonly IConfiguration _configuration;
     private readonly ILogger<AuthController> _logger;
+    private readonly IEmailService _emailService;
 
     public AuthController(
         UserManager<ApplicationIdentityUser> userManager,
         SignInManager<ApplicationIdentityUser> signInManager,
         IConfiguration configuration,
-        ILogger<AuthController> logger)
+        ILogger<AuthController> logger,
+        IEmailService emailService)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _configuration = configuration;
         _logger = logger;
+        _emailService = emailService;
     }
 
     /// <summary>
@@ -117,9 +121,18 @@ public class AuthController : ControllerBase
 
         var token = await _userManager.GeneratePasswordResetTokenAsync(user);
 
-        // TODO: Send email with reset link
-        // The link should point to: {frontendUrl}/reset-password?token={token}&email={email}
-        _logger.LogInformation("Token reset password generato per: {Email}. Token: {Token}", request.Email, token);
+        var frontendUrl = _configuration["FrontendUrl"] ?? "http://localhost:5173";
+        var resetLink = $"{frontendUrl}/reset-password?token={Uri.EscapeDataString(token)}&email={Uri.EscapeDataString(request.Email)}";
+
+        try
+        {
+            await _emailService.SendPasswordResetEmailAsync(request.Email, resetLink);
+            _logger.LogInformation("Email di reset password inviata a: {Email}", request.Email);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Errore invio email di reset password a: {Email}", request.Email);
+        }
 
         return Ok(new { message = "Se l'email è associata a un account, riceverai le istruzioni." });
     }

@@ -1,3 +1,4 @@
+using CoreERP.Infrastructure.Email;
 using CoreERP.Infrastructure.Identity;
 using CoreERP.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
@@ -38,6 +39,9 @@ public static class DependencyInjection
         // Microsoft Graph Service
         services.AddHttpClient();
         services.AddScoped<IMicrosoftGraphService, MicrosoftGraphService>();
+
+        // Email Service
+        services.AddScoped<IEmailService, SmtpEmailService>();
 
         return services;
     }
