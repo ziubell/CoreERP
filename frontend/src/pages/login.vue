@@ -32,6 +32,22 @@ const credentials = ref({
 
 const rememberMe = ref(false)
 
+// Show Microsoft auth error if redirected back with error
+const microsoftError = ref<string>()
+const errorMessages: Record<string, string> = {
+  microsoft_auth_failed: 'Autenticazione Microsoft fallita. Riprova.',
+  microsoft_no_email: 'Impossibile ottenere l\'email dal tuo account Microsoft.',
+  microsoft_registration_failed: 'Errore durante la registrazione con Microsoft.',
+  microsoft_auth_error: 'Si è verificato un errore con l\'accesso Microsoft. Riprova.',
+}
+
+onMounted(() => {
+  const error = route.query.error as string
+  if (error && errorMessages[error]) {
+    microsoftError.value = errorMessages[error]
+  }
+})
+
 const handleLoginSuccess = async (res: any) => {
   const { accessToken, userData, userAbilityRules } = res
 
@@ -119,6 +135,17 @@ const onSubmit = () => {
         <p class="mb-0">
           Accedi al tuo account per continuare
         </p>
+      </VCardText>
+
+      <VCardText v-if="microsoftError">
+        <VAlert
+          type="error"
+          variant="tonal"
+          closable
+          @click:close="microsoftError = undefined"
+        >
+          {{ microsoftError }}
+        </VAlert>
       </VCardText>
 
       <VCardText>

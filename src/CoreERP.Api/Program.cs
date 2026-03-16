@@ -13,6 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 var envFile = Path.Combine(builder.Environment.ContentRootPath, ".env");
 if (File.Exists(envFile))
 {
+    var envVars = new Dictionary<string, string?>();
     foreach (var line in File.ReadAllLines(envFile))
     {
         var trimmed = line.Trim();
@@ -20,8 +21,13 @@ if (File.Exists(envFile))
             continue;
         var idx = trimmed.IndexOf('=');
         if (idx > 0)
-            Environment.SetEnvironmentVariable(trimmed[..idx], trimmed[(idx + 1)..]);
+        {
+            // Convert AzureAd__ClientSecret to AzureAd:ClientSecret for .NET config
+            var key = trimmed[..idx].Replace("__", ":");
+            envVars[key] = trimmed[(idx + 1)..];
+        }
     }
+    builder.Configuration.AddInMemoryCollection(envVars);
 }
 
 // Serilog
