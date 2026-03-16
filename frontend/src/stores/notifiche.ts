@@ -76,10 +76,8 @@ export const useNotificheStore = defineStore('notifiche', () => {
     const accessToken = useCookie('accessToken').value
     if (!accessToken || connection) return
 
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || ''
-
     connection = new HubConnectionBuilder()
-      .withUrl(`${baseUrl}/hubs/notifiche`, {
+      .withUrl('/hubs/notifiche', {
         accessTokenFactory: () => useCookie('accessToken').value ?? '',
       })
       .withAutomaticReconnect()
@@ -103,10 +101,15 @@ export const useNotificheStore = defineStore('notifiche', () => {
   }
 
   async function init() {
-    await Promise.all([
-      fetchNotifiche(),
-      fetchContaNonLette(),
-    ])
+    try {
+      await Promise.all([
+        fetchNotifiche(),
+        fetchContaNonLette(),
+      ])
+    }
+    catch (err) {
+      console.warn('Notifiche: impossibile caricare le notifiche', err)
+    }
     startConnection()
   }
 
