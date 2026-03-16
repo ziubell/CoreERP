@@ -63,6 +63,9 @@ importers:
       cookie-es:
         specifier: 1.2.2
         version: 1.2.2
+      cropperjs:
+        specifier: 1.6.2
+        version: 1.6.2
       destr:
         specifier: 2.0.5
         version: 2.0.5
@@ -2155,6 +2158,9 @@ packages:
 
   crelt@1.0.6:
     resolution: {integrity: sha512-VQ2MBenTq1fWZUH9DJNGti7kKv6EeAuYr3cLwxUWhIu1baTaXh4Ib5W2CqHVqib4/MqbYGJqiL3Zb8GJZr3l4g==}
+
+  cropperjs@1.6.2:
+    resolution: {integrity: sha512-nhymn9GdnV3CqiEHJVai54TULFAE3VshJTXSqSJKa8yXAKyBKDWdhHarnlIPrshJ0WMFTGuFvG02YjLXfPiuOA==}
 
   cross-spawn@7.0.6:
     resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
@@ -6847,6 +6853,8 @@ snapshots:
       typescript: 5.9.3
 
   crelt@1.0.6: {}
+
+  cropperjs@1.6.2: {}
 
   cross-spawn@7.0.6:
     dependencies:

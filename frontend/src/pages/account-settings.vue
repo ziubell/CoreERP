@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AccountSettingsNotifications from '@/views/pages/account-settings/AccountSettingsNotifications.vue'
 import AccountSettingsProfile from '@/views/pages/account-settings/AccountSettingsProfile.vue'
 import AccountSettingsSecurity from '@/views/pages/account-settings/AccountSettingsSecurity.vue'
 
@@ -14,6 +15,7 @@ const activeTab = ref(route.query.tab?.toString() ?? 'profilo')
 const tabs = [
   { title: 'Profilo', icon: 'tabler-user', tab: 'profilo' },
   { title: 'Sicurezza', icon: 'tabler-lock', tab: 'sicurezza' },
+  { title: 'Notifiche', icon: 'tabler-bell', tab: 'notifiche' },
 ]
 </script>
 
@@ -47,6 +49,10 @@ const tabs = [
 
       <VWindowItem value="sicurezza">
         <AccountSettingsSecurity />
+      </VWindowItem>
+
+      <VWindowItem value="notifiche">
+        <AccountSettingsNotifications />
       </VWindowItem>
     </VWindow>
   </div>

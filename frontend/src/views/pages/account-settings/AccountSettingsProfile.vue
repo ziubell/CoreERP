@@ -1,8 +1,17 @@
 <script setup lang="ts">
+import Cropper from 'cropperjs'
+import 'cropperjs/dist/cropper.css'
+
 const userData = useCookie<any>('userData')
 const isLoading = ref(false)
 const isPhotoUploading = ref(false)
 const snackbar = ref({ show: false, message: '', color: 'success' })
+
+// Crop modal
+const showCropDialog = ref(false)
+const cropImageSrc = ref('')
+const cropperRef = ref<HTMLImageElement>()
+let cropperInstance: Cropper | null = null
 
 const profileData = ref({
   nome: '',
@@ -57,7 +66,6 @@ const saveProfile = async () => {
       },
     })
 
-    // Sync cookie
     if (res.userData)
       userData.value = res.userData
 
@@ -75,39 +83,95 @@ const triggerFileInput = () => {
   fileInput.value?.click()
 }
 
-const uploadPhoto = async (event: Event) => {
+const onFileSelected = (event: Event) => {
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
   if (!file)
     return
 
-  isPhotoUploading.value = true
-
-  const formData = new FormData()
-  formData.append('file', file)
-
-  try {
-    const res = await $api('/profile/foto', {
-      method: 'POST',
-      body: formData,
-    })
-
-    profileData.value.foto = res.avatar
-
-    // Sync cookie
-    if (res.userData)
-      userData.value = res.userData
-
-    showSnackbar('Foto aggiornata con successo.', 'success')
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    cropImageSrc.value = e.target?.result as string
+    showCropDialog.value = true
   }
-  catch {
-    showSnackbar('Errore nel caricamento della foto.', 'error')
+  reader.readAsDataURL(file)
+
+  // Reset input so same file can be selected again
+  target.value = ''
+}
+
+const onCropDialogOpened = () => {
+  nextTick(() => {
+    if (cropperRef.value) {
+      cropperInstance = new Cropper(cropperRef.value, {
+        aspectRatio: 1,
+        viewMode: 1,
+        dragMode: 'move',
+        autoCropArea: 1,
+        cropBoxResizable: true,
+        cropBoxMovable: true,
+        guides: true,
+        center: true,
+        highlight: false,
+        background: true,
+        responsive: true,
+        minCropBoxWidth: 100,
+        minCropBoxHeight: 100,
+      })
+    }
+  })
+}
+
+const closeCropDialog = () => {
+  showCropDialog.value = false
+  cropImageSrc.value = ''
+  if (cropperInstance) {
+    cropperInstance.destroy()
+    cropperInstance = null
   }
-  finally {
-    isPhotoUploading.value = false
-    // Reset input
-    target.value = ''
-  }
+}
+
+const applyCrop = async () => {
+  if (!cropperInstance)
+    return
+
+  const canvas = cropperInstance.getCroppedCanvas({
+    width: 256,
+    height: 256,
+    imageSmoothingEnabled: true,
+    imageSmoothingQuality: 'high',
+  })
+
+  canvas.toBlob(async (blob) => {
+    if (!blob)
+      return
+
+    isPhotoUploading.value = true
+    closeCropDialog()
+
+    const formData = new FormData()
+    formData.append('file', blob, 'avatar.png')
+
+    try {
+      const res = await $api('/profile/foto', {
+        method: 'POST',
+        body: formData,
+      })
+
+      profileData.value.foto = res.avatar
+
+      if (res.userData)
+        userData.value = res.userData
+
+      showSnackbar('Foto aggiornata con successo.', 'success')
+    }
+    catch {
+      showSnackbar('Errore nel caricamento della foto.', 'error')
+    }
+    finally {
+      isPhotoUploading.value = false
+    }
+  }, 'image/png')
 }
 
 const deletePhoto = async () => {
@@ -118,7 +182,6 @@ const deletePhoto = async () => {
 
     profileData.value.foto = ''
 
-    // Sync cookie
     if (res.userData)
       userData.value = res.userData
 
@@ -204,7 +267,7 @@ onMounted(fetchProfile)
               type="file"
               accept="image/jpeg,image/png,image/webp"
               class="d-none"
-              @change="uploadPhoto"
+              @change="onFileSelected"
             >
           </div>
         </VCardText>
@@ -311,6 +374,58 @@ onMounted(fetchProfile)
     </VCol>
   </VRow>
 
+  <!-- Crop Dialog -->
+  <VDialog
+    v-model="showCropDialog"
+    max-width="600"
+    persistent
+    @after-enter="onCropDialogOpened"
+  >
+    <VCard>
+      <VCardTitle class="d-flex align-center justify-space-between">
+        <span>Ritaglia foto profilo</span>
+        <VBtn
+          icon
+          variant="text"
+          size="small"
+          @click="closeCropDialog"
+        >
+          <VIcon icon="tabler-x" />
+        </VBtn>
+      </VCardTitle>
+
+      <VCardText>
+        <div class="cropper-wrapper">
+          <img
+            ref="cropperRef"
+            :src="cropImageSrc"
+            class="cropper-image"
+          >
+        </div>
+      </VCardText>
+
+      <VCardActions class="justify-end pa-4">
+        <VBtn
+          variant="tonal"
+          color="secondary"
+          @click="closeCropDialog"
+        >
+          Annulla
+        </VBtn>
+        <VBtn
+          color="primary"
+          @click="applyCrop"
+        >
+          <VIcon
+            start
+            icon="tabler-crop"
+          />
+          Applica
+        </VBtn>
+      </VCardActions>
+    </VCard>
+  </VDialog>
+
   <!-- Snackbar -->
   <VSnackbar
     v-model="snackbar.show"
@@ -321,3 +436,16 @@ onMounted(fetchProfile)
     {{ snackbar.message }}
   </VSnackbar>
 </template>
+
+<style>
+.cropper-wrapper {
+  max-block-size: 400px;
+  overflow: hidden;
+}
+
+.cropper-image {
+  display: block;
+  inline-size: 100%;
+  max-inline-size: 100%;
+}
+</style>
