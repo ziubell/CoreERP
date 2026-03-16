@@ -13,7 +13,7 @@ html {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: var(--initial-loader-bg, #fff);
+  background: var(--initial-loader-bg, #0A0D1B);
   block-size: 100%;
   gap: 1rem 0;
   inline-size: 100%;
@@ -36,7 +36,7 @@ html {
   border: 3px solid transparent;
   border-radius: 50%;
   block-size: 100%;
-  border-inline-start: 3px solid var(--initial-loader-color, #eee);
+  border-inline-start: 3px solid var(--initial-loader-color, #0989C7);
   inline-size: 100%;
 }
 
