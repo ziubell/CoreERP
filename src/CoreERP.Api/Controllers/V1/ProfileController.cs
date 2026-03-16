@@ -287,7 +287,7 @@ public class ProfileController : ControllerBase
 
         var tenantId = _configuration["AzureAd:TenantId"];
         var redirectUri = $"{Request.Scheme}://{Request.Host}/api/profile/microsoft-link-callback";
-        var scope = "openid profile email User.Read";
+        var scope = "openid profile email User.Read offline_access";
 
         var authUrl = $"https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/authorize" +
             $"?client_id={clientId}" +
@@ -327,7 +327,7 @@ public class ProfileController : ControllerBase
                     ["code"] = code,
                     ["redirect_uri"] = redirectUri,
                     ["grant_type"] = "authorization_code",
-                    ["scope"] = "openid profile email User.Read",
+                    ["scope"] = "openid profile email User.Read offline_access",
                 }));
 
             if (!tokenResponse.IsSuccessStatusCode)
@@ -358,10 +358,13 @@ public class ProfileController : ControllerBase
                 return Redirect("/account-settings?tab=security&microsoft=already_linked_other");
             }
 
-            // Link Microsoft account
+            // Link Microsoft account and save tokens
             user.MicrosoftId = graphUser.Id;
             user.MicrosoftEmail = graphUser.Mail ?? graphUser.UserPrincipalName;
             user.DataCollegamentoMicrosoft = DateTime.UtcNow;
+            user.MicrosoftAccessToken = tokenData.AccessToken;
+            user.MicrosoftRefreshToken = tokenData.RefreshToken;
+            user.MicrosoftTokenExpiry = DateTime.UtcNow.AddSeconds(tokenData.ExpiresIn);
             await _userManager.UpdateAsync(user);
 
             _logger.LogInformation("Account Microsoft collegato per: {Email}", user.Email);
@@ -398,6 +401,9 @@ public class ProfileController : ControllerBase
         user.MicrosoftId = null;
         user.MicrosoftEmail = null;
         user.DataCollegamentoMicrosoft = null;
+        user.MicrosoftAccessToken = null;
+        user.MicrosoftRefreshToken = null;
+        user.MicrosoftTokenExpiry = null;
         await _userManager.UpdateAsync(user);
 
         _logger.LogInformation("Account Microsoft scollegato per: {Email}", user.Email);

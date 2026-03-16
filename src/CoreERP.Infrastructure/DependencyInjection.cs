@@ -35,6 +35,10 @@ public static class DependencyInjection
         .AddEntityFrameworkStores<ApplicationDbContext>()
         .AddDefaultTokenProviders();
 
+        // Microsoft Graph Service
+        services.AddHttpClient();
+        services.AddScoped<IMicrosoftGraphService, MicrosoftGraphService>();
+
         return services;
     }
 }

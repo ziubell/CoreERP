@@ -163,7 +163,7 @@ public class AuthController : ControllerBase
         var tenantId = _configuration["AzureAd:TenantId"];
         var redirectUri = $"{Request.Scheme}://{Request.Host}/api/auth/microsoft-callback";
         var state = Convert.ToBase64String(Encoding.UTF8.GetBytes(returnUrl ?? "/"));
-        var scope = "openid profile email User.Read";
+        var scope = "openid profile email User.Read offline_access";
 
         var authUrl = $"https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/authorize" +
             $"?client_id={clientId}" +
@@ -205,7 +205,7 @@ public class AuthController : ControllerBase
                     ["code"] = code,
                     ["redirect_uri"] = redirectUri,
                     ["grant_type"] = "authorization_code",
-                    ["scope"] = "openid profile email User.Read",
+                    ["scope"] = "openid profile email User.Read offline_access",
                 }));
 
             if (!tokenResponse.IsSuccessStatusCode)
@@ -288,6 +288,11 @@ public class AuthController : ControllerBase
                 // Try to download Microsoft profile photo
                 await TryDownloadMicrosoftPhoto(httpClient, user);
             }
+
+            // Save Microsoft tokens for future Graph API calls
+            user.MicrosoftAccessToken = tokenData.AccessToken;
+            user.MicrosoftRefreshToken = tokenData.RefreshToken;
+            user.MicrosoftTokenExpiry = DateTime.UtcNow.AddSeconds(tokenData.ExpiresIn);
 
             // Update login timestamps
             user.DataUltimoLogin = user.DataLogin;

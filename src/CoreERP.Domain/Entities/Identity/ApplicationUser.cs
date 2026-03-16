@@ -25,6 +25,9 @@ public class ApplicationUser
     public string? MicrosoftId { get; set; }
     public string? MicrosoftEmail { get; set; }
     public DateTime? DataCollegamentoMicrosoft { get; set; }
+    public string? MicrosoftAccessToken { get; set; }
+    public string? MicrosoftRefreshToken { get; set; }
+    public DateTime? MicrosoftTokenExpiry { get; set; }
 
     public string NomeCompleto => $"{Nome} {Cognome}".Trim();
 }
