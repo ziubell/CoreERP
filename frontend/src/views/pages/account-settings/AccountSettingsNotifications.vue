@@ -38,8 +38,8 @@ onMounted(async () => {
   try {
     // Check if user has Microsoft account linked
     try {
-      const profile = await $api<{ microsoftId?: string }>('/profile')
-      hasMicrosoft.value = !!profile.microsoftId
+      const profile = await $api<{ microsoftLinked: boolean }>('/profile/me')
+      hasMicrosoft.value = profile.microsoftLinked
     }
     catch {
       hasMicrosoft.value = false
