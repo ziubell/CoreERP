@@ -3,6 +3,7 @@ import type { Notification } from '@layouts/types'
 import { useNotificheStore } from '@/stores/notifiche'
 
 const store = useNotificheStore()
+const router = useRouter()
 
 // Init store on mount
 onMounted(() => {
@@ -65,10 +66,8 @@ const handleNotificationClick = (notification: Notification) => {
 
   // Navigate to link if present
   const notificaApi = store.notifiche.find(n => n.id === notification.id)
-  if (notificaApi?.link) {
-    const router = useRouter()
+  if (notificaApi?.link)
     router.push(notificaApi.link)
-  }
 }
 </script>
 
@@ -79,6 +78,6 @@ const handleNotificationClick = (notification: Notification) => {
     @read="markRead"
     @unread="markUnRead"
     @click:notification="handleNotificationClick"
-    @click:view-all="useRouter().push('/notifiche')"
+    @click:view-all="router.push('/notifiche')"
   />
 </template>
