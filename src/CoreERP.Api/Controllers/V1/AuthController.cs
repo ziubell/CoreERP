@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json.Serialization;
 using CoreERP.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -34,35 +35,51 @@ public class AuthController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
-        var user = await _userManager.FindByEmailAsync(request.Email);
-        if (user is null)
+        try
         {
-            return Unauthorized(new { errors = new { email = "Credenziali non valide" } });
+            _logger.LogInformation("Tentativo login per: {Email}", request.Email);
+
+            var user = await _userManager.FindByEmailAsync(request.Email);
+            if (user is null)
+            {
+                _logger.LogWarning("Utente non trovato: {Email}", request.Email);
+                return Unauthorized(new { errors = new { email = "Credenziali non valide" } });
+            }
+
+            _logger.LogInformation("Utente trovato: {Email}, verifico password...", request.Email);
+
+            var result = await _signInManager.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: true);
+
+            if (result.IsLockedOut)
+            {
+                _logger.LogWarning("Account bloccato per troppi tentativi: {Email}", request.Email);
+                return Unauthorized(new { errors = new { email = "Account temporaneamente bloccato. Riprova tra qualche minuto." } });
+            }
+
+            if (!result.Succeeded)
+            {
+                _logger.LogWarning("Password errata per: {Email}", request.Email);
+                return Unauthorized(new { errors = new { email = "Credenziali non valide" } });
+            }
+
+            _logger.LogInformation("Password corretta, genero token per: {Email}", request.Email);
+
+            // Update login timestamps
+            user.DataUltimoLogin = user.DataLogin;
+            user.DataLogin = DateTime.UtcNow;
+            await _userManager.UpdateAsync(user);
+
+            var tokenResponse = await GenerateTokenResponse(user);
+
+            _logger.LogInformation("Login effettuato con successo: {Email}", request.Email);
+
+            return Ok(tokenResponse);
         }
-
-        var result = await _signInManager.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: true);
-
-        if (result.IsLockedOut)
+        catch (Exception ex)
         {
-            _logger.LogWarning("Account bloccato per troppi tentativi: {Email}", request.Email);
-            return Unauthorized(new { errors = new { email = "Account temporaneamente bloccato. Riprova tra qualche minuto." } });
+            _logger.LogError(ex, "ERRORE LOGIN per {Email}: {Message}", request.Email, ex.ToString());
+            return StatusCode(500, new { message = $"Errore interno: {ex.Message}", detail = ex.ToString() });
         }
-
-        if (!result.Succeeded)
-        {
-            return Unauthorized(new { errors = new { email = "Credenziali non valide" } });
-        }
-
-        // Update login timestamps
-        user.DataUltimoLogin = user.DataLogin;
-        user.DataLogin = DateTime.UtcNow;
-        await _userManager.UpdateAsync(user);
-
-        var tokenResponse = await GenerateTokenResponse(user);
-
-        _logger.LogInformation("Login effettuato: {Email}", request.Email);
-
-        return Ok(tokenResponse);
     }
 
     [HttpPost("forgot-password")]
@@ -336,9 +353,18 @@ public class AbilityRule
 
 public class MicrosoftTokenResponse
 {
+    [JsonPropertyName("access_token")]
     public string? AccessToken { get; set; }
+
+    [JsonPropertyName("id_token")]
     public string? IdToken { get; set; }
+
+    [JsonPropertyName("refresh_token")]
     public string? RefreshToken { get; set; }
+
+    [JsonPropertyName("token_type")]
     public string? TokenType { get; set; }
+
+    [JsonPropertyName("expires_in")]
     public int ExpiresIn { get; set; }
 }
