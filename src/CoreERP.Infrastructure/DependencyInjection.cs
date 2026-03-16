@@ -1,8 +1,5 @@
-using CoreERP.Application.Common.Interfaces;
-using CoreERP.Domain.Interfaces.Services;
 using CoreERP.Infrastructure.Identity;
 using CoreERP.Infrastructure.Persistence;
-using Hangfire;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -20,13 +17,9 @@ public static class DependencyInjection
                 configuration.GetConnectionString("DefaultConnection"),
                 sqlOptions =>
                 {
-                    sqlOptions.UseNetTopologySuite();
                     sqlOptions.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName);
                     sqlOptions.EnableRetryOnFailure(maxRetryCount: 3);
                 }));
-
-        services.AddScoped<IApplicationDbContext>(provider =>
-            provider.GetRequiredService<ApplicationDbContext>());
 
         // Identity
         services.AddIdentity<ApplicationIdentityUser, IdentityRole>(options =>
@@ -41,29 +34,6 @@ public static class DependencyInjection
         })
         .AddEntityFrameworkStores<ApplicationDbContext>()
         .AddDefaultTokenProviders();
-
-        // Services
-        services.AddScoped<ICurrentUserService, CurrentUserService>();
-
-        // Redis Cache
-        var redisConnection = configuration.GetConnectionString("Redis");
-        if (!string.IsNullOrWhiteSpace(redisConnection))
-        {
-            services.AddStackExchangeRedisCache(options =>
-            {
-                options.Configuration = redisConnection;
-                options.InstanceName = "CoreERP:";
-            });
-        }
-        else
-        {
-            services.AddDistributedMemoryCache();
-        }
-
-        // Hangfire
-        services.AddHangfire(config =>
-            config.UseSqlServerStorage(configuration.GetConnectionString("DefaultConnection")));
-        services.AddHangfireServer();
 
         return services;
     }

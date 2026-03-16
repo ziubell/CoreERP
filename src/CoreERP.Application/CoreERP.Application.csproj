@@ -3,15 +3,6 @@
     <RootNamespace>CoreERP.Application</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="MediatR" />
-    <PackageReference Include="FluentValidation" />
-    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
-    <PackageReference Include="Mapster" />
-    <PackageReference Include="Mapster.DependencyInjection" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\CoreERP.Domain\CoreERP.Domain.csproj" />
   </ItemGroup>
 </Project>

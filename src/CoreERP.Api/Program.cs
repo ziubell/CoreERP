@@ -1,8 +1,6 @@
 using System.Globalization;
 using System.Text;
-using Asp.Versioning;
 using CoreERP.Api.Middleware;
-using CoreERP.Application;
 using CoreERP.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -20,8 +18,7 @@ var cultureInfo = new CultureInfo("it-IT") { NumberFormat = { CurrencySymbol = "
 CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
 CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
 
-// Application & Infrastructure layers
-builder.Services.AddApplication();
+// Infrastructure layer (DB + Identity)
 builder.Services.AddInfrastructure(builder.Configuration);
 
 // Authentication - JWT Bearer
@@ -46,20 +43,6 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddAuthorization();
-
-// API Versioning
-builder.Services.AddApiVersioning(options =>
-{
-    options.DefaultApiVersion = new ApiVersion(1, 0);
-    options.AssumeDefaultVersionWhenUnspecified = true;
-    options.ReportApiVersions = true;
-    options.ApiVersionReader = new UrlSegmentApiVersionReader();
-})
-.AddApiExplorer(options =>
-{
-    options.GroupNameFormat = "'v'VVV";
-    options.SubstituteApiVersionInUrl = true;
-});
 
 // Controllers
 builder.Services.AddControllers();
@@ -99,7 +82,7 @@ builder.Services.AddSwaggerGen(options =>
 // CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowReactApp", policy =>
+    options.AddPolicy("AllowFrontend", policy =>
     {
         policy
             .WithOrigins(builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? ["http://localhost:5173"])
@@ -111,9 +94,6 @@ builder.Services.AddCors(options =>
 
 // Health checks
 builder.Services.AddHealthChecks();
-
-// SignalR
-builder.Services.AddSignalR();
 
 var app = builder.Build();
 
@@ -143,7 +123,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors("AllowReactApp");
+app.UseCors("AllowFrontend");
 
 // Serve uploaded files (profile photos, etc.)
 var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "uploads");
