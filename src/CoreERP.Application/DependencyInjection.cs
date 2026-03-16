@@ -1,11 +1,6 @@
-using Microsoft.Extensions.DependencyInjection;
-
 namespace CoreERP.Application;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddApplication(this IServiceCollection services)
-    {
-        return services;
-    }
+    // Placeholder - servizi application verranno aggiunti qui in futuro
 }
