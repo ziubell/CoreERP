@@ -48,12 +48,6 @@ const userProfileList = [
     title: 'Profilo',
     to: { name: 'account-settings' },
   },
-  {
-    type: 'navItem',
-    icon: 'tabler-smart-home',
-    title: 'Dashboard',
-    to: { name: 'dashboard' },
-  },
 ]
 </script>
 
