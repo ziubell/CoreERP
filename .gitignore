@@ -25,3 +25,4 @@ x86/
 # Misc
 *.log
 *.tmp
+/src/CoreERP.Api/uploads/avatars/dcff23ad-27fe-460e-8d68-00c34df03599_1773662855.png
