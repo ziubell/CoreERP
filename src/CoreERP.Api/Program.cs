@@ -120,7 +120,14 @@ var app = builder.Build();
 // Database seeding
 if (app.Environment.IsDevelopment())
 {
-    await CoreERP.Infrastructure.Persistence.DatabaseSeeder.SeedAsync(app.Services);
+    try
+    {
+        await CoreERP.Infrastructure.Persistence.DatabaseSeeder.SeedAsync(app.Services);
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "Errore durante il seed del database");
+    }
 }
 
 // Middleware pipeline
