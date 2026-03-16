@@ -308,9 +308,10 @@ public class AuthController : ControllerBase
             _logger.LogInformation("Login Microsoft effettuato: {Email}", email);
 
             // Redirect to frontend callback page with token
+            var jsonOptions = new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase };
             var accessToken = Uri.EscapeDataString(appToken.AccessToken);
-            var userData = Uri.EscapeDataString(System.Text.Json.JsonSerializer.Serialize(appToken.UserData));
-            var abilityRules = Uri.EscapeDataString(System.Text.Json.JsonSerializer.Serialize(appToken.UserAbilityRules));
+            var userData = Uri.EscapeDataString(System.Text.Json.JsonSerializer.Serialize(appToken.UserData, jsonOptions));
+            var abilityRules = Uri.EscapeDataString(System.Text.Json.JsonSerializer.Serialize(appToken.UserAbilityRules, jsonOptions));
 
             return Redirect($"{frontendUrl}/auth/microsoft-callback?accessToken={accessToken}&userData={userData}&userAbilityRules={abilityRules}&returnUrl={Uri.EscapeDataString(returnUrl)}");
         }
