@@ -57,7 +57,7 @@ const onSubmit = () => {
       <VCardItem class="justify-center">
         <RouterLink to="/">
           <div class="d-flex align-center gap-x-3">
-            <VNodeRenderer :nodes="themeConfig.app.logo" />
+            <img src="@/assets/images/logos/logo_bianco.png" alt="Spadhausen" style="height: 28px; width: auto;">
             <h1 class="auth-title">
               {{ themeConfig.app.title }}
             </h1>
