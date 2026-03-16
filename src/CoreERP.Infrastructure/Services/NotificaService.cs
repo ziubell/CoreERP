@@ -22,6 +22,7 @@ public class NotificaService : INotificaService
     private readonly IEmailService _emailService;
     private readonly ITeamsNotificationService _teamsService;
     private readonly UserManager<ApplicationIdentityUser> _userManager;
+    private readonly ISottoscrizioneNotificaRepository _sottoscrizioneRepository;
     private readonly ILogger<NotificaService> _logger;
 
     private static readonly ConcurrentDictionary<string, TipoNotifica> _tipoCache = new();
@@ -30,6 +31,7 @@ public class NotificaService : INotificaService
         ApplicationDbContext context,
         INotificaRepository notificaRepository,
         IPreferenzaNotificaRepository preferenzaRepository,
+        ISottoscrizioneNotificaRepository sottoscrizioneRepository,
         IHubContext<NotificaHub> hubContext,
         IEmailService emailService,
         ITeamsNotificationService teamsService,
@@ -39,6 +41,7 @@ public class NotificaService : INotificaService
         _context = context;
         _notificaRepository = notificaRepository;
         _preferenzaRepository = preferenzaRepository;
+        _sottoscrizioneRepository = sottoscrizioneRepository;
         _hubContext = hubContext;
         _emailService = emailService;
         _teamsService = teamsService;
@@ -151,6 +154,21 @@ public class NotificaService : INotificaService
         {
             await InviaAsync(userId, codiceTipoNotifica, titolo, messaggio, link, mittenteUserId);
         }
+    }
+
+    public async Task InviaAFollowersAsync(string entitaTipo, int entitaId, string codiceTipoNotifica,
+        string titolo, string? messaggio = null, string? link = null, string? mittenteUserId = null)
+    {
+        var followers = await _sottoscrizioneRepository.GetFollowersAsync(entitaTipo, entitaId);
+
+        // Exclude the sender from recipients
+        if (mittenteUserId is not null)
+            followers = followers.Where(f => f != mittenteUserId).ToList();
+
+        if (followers.Count == 0)
+            return;
+
+        await InviaMultiplaAsync(followers, codiceTipoNotifica, titolo, messaggio, link, mittenteUserId);
     }
 
     private async Task<TipoNotifica?> GetTipoNotificaAsync(string codice)

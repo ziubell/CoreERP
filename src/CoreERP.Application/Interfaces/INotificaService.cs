@@ -7,4 +7,7 @@ public interface INotificaService
 
     Task InviaMultiplaAsync(IEnumerable<string> userIds, string codiceTipoNotifica, string titolo,
         string? messaggio = null, string? link = null, string? mittenteUserId = null);
+
+    Task InviaAFollowersAsync(string entitaTipo, int entitaId, string codiceTipoNotifica,
+        string titolo, string? messaggio = null, string? link = null, string? mittenteUserId = null);
 }

@@ -26,3 +26,7 @@ export interface PreferenzaNotificaApi {
   browser: boolean
   teams: boolean
 }
+
+export interface ImpostazioniNotificaApi {
+  giorniRetention: number
+}

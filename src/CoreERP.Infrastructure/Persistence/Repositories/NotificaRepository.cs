@@ -14,7 +14,8 @@ public class NotificaRepository : INotificaRepository
     }
 
     public async Task<List<Notifica>> GetByUserAsync(string userId, bool soloNonLette = false,
-        int pagina = 1, int dimensionePagina = 20)
+        int pagina = 1, int dimensionePagina = 20,
+        string? ricerca = null, string? modulo = null)
     {
         var query = _context.Notifiche
             .Include(n => n.TipoNotifica)
@@ -22,6 +23,15 @@ public class NotificaRepository : INotificaRepository
 
         if (soloNonLette)
             query = query.Where(n => !n.Letta);
+
+        if (!string.IsNullOrWhiteSpace(ricerca))
+        {
+            var term = ricerca.Trim();
+            query = query.Where(n => n.Titolo.Contains(term) || (n.Messaggio != null && n.Messaggio.Contains(term)));
+        }
+
+        if (!string.IsNullOrWhiteSpace(modulo))
+            query = query.Where(n => n.TipoNotifica.Modulo == modulo);
 
         return await query
             .OrderByDescending(n => n.DataCreazione)
@@ -62,6 +72,20 @@ public class NotificaRepository : INotificaRepository
     {
         await _context.Notifiche
             .Where(n => n.Id == notificaId && n.UserId == userId)
+            .ExecuteDeleteAsync();
+    }
+
+    public async Task EliminaMultipleAsync(List<int> ids, string userId)
+    {
+        await _context.Notifiche
+            .Where(n => ids.Contains(n.Id) && n.UserId == userId)
+            .ExecuteDeleteAsync();
+    }
+
+    public async Task EliminaTutteAsync(string userId)
+    {
+        await _context.Notifiche
+            .Where(n => n.UserId == userId)
             .ExecuteDeleteAsync();
     }
 

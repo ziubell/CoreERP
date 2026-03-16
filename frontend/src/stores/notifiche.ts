@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { HubConnectionBuilder, type HubConnection } from '@microsoft/signalr'
-import type { NotificaApi, PreferenzaNotificaApi, TipoNotificaApi } from '@/types/notifiche'
+import type { ImpostazioniNotificaApi, NotificaApi, PreferenzaNotificaApi, TipoNotificaApi } from '@/types/notifiche'
 import { $api } from '@/utils/api'
 
 export const useNotificheStore = defineStore('notifiche', () => {
@@ -12,12 +12,14 @@ export const useNotificheStore = defineStore('notifiche', () => {
 
   let connection: HubConnection | null = null
 
-  async function fetchNotifiche(soloNonLette = false, pagina = 1) {
+  async function fetchNotifiche(soloNonLette = false, pagina = 1, ricerca?: string, modulo?: string) {
     loading.value = true
     try {
       const params = new URLSearchParams()
       if (soloNonLette) params.set('soloNonLette', 'true')
       params.set('pagina', pagina.toString())
+      if (ricerca) params.set('ricerca', ricerca)
+      if (modulo) params.set('modulo', modulo)
 
       const data = await $api<NotificaApi[]>(`/v1/notifiche?${params}`)
       if (pagina === 1)
@@ -56,6 +58,21 @@ export const useNotificheStore = defineStore('notifiche', () => {
     await fetchContaNonLette()
   }
 
+  async function eliminaMultiple(ids: number[]) {
+    await $api('/v1/notifiche/bulk', {
+      method: 'DELETE',
+      body: { ids },
+    })
+    notifiche.value = notifiche.value.filter(n => !ids.includes(n.id))
+    await fetchContaNonLette()
+  }
+
+  async function eliminaTutte() {
+    await $api('/v1/notifiche/tutte', { method: 'DELETE' })
+    notifiche.value = []
+    nonLette.value = 0
+  }
+
   async function fetchTipiNotifica() {
     tipiNotifica.value = await $api<TipoNotificaApi[]>('/v1/notifiche/tipi')
   }
@@ -70,6 +87,17 @@ export const useNotificheStore = defineStore('notifiche', () => {
       body: prefs,
     })
     preferenze.value = prefs
+  }
+
+  async function fetchImpostazioni() {
+    return await $api<ImpostazioniNotificaApi>('/v1/notifiche/impostazioni')
+  }
+
+  async function salvaImpostazioni(giorniRetention: number) {
+    await $api('/v1/notifiche/impostazioni', {
+      method: 'PUT',
+      body: { giorniRetention },
+    })
   }
 
   function startConnection() {
@@ -124,9 +152,13 @@ export const useNotificheStore = defineStore('notifiche', () => {
     segnaComeLetta,
     segnaTutteComeLette,
     elimina,
+    eliminaMultiple,
+    eliminaTutte,
     fetchTipiNotifica,
     fetchPreferenze,
     salvaPreferenze,
+    fetchImpostazioni,
+    salvaImpostazioni,
     startConnection,
     stopConnection,
     init,

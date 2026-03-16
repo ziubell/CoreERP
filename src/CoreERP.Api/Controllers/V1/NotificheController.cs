@@ -35,10 +35,12 @@ public class NotificheController : ControllerBase
     public async Task<IActionResult> GetNotifiche(
         [FromQuery] bool soloNonLette = false,
         [FromQuery] int pagina = 1,
-        [FromQuery] int dimensionePagina = 20)
+        [FromQuery] int dimensionePagina = 20,
+        [FromQuery] string? ricerca = null,
+        [FromQuery] string? modulo = null)
     {
         var userId = GetUserId();
-        var notifiche = await _notificaRepository.GetByUserAsync(userId, soloNonLette, pagina, dimensionePagina);
+        var notifiche = await _notificaRepository.GetByUserAsync(userId, soloNonLette, pagina, dimensionePagina, ricerca, modulo);
 
         // Resolve sender info for notifications with MittenteUserId
         var mittenteIds = notifiche
@@ -102,6 +104,20 @@ public class NotificheController : ControllerBase
         return NoContent();
     }
 
+    [HttpDelete("bulk")]
+    public async Task<IActionResult> EliminaBulk([FromBody] BulkDeleteRequest request)
+    {
+        await _notificaRepository.EliminaMultipleAsync(request.Ids, GetUserId());
+        return NoContent();
+    }
+
+    [HttpDelete("tutte")]
+    public async Task<IActionResult> EliminaTutte()
+    {
+        await _notificaRepository.EliminaTutteAsync(GetUserId());
+        return NoContent();
+    }
+
     [HttpGet("tipi")]
     public async Task<IActionResult> GetTipiNotifica()
     {
@@ -131,4 +147,75 @@ public class NotificheController : ControllerBase
         await _preferenzaRepository.SalvaPreferenzeAsync(GetUserId(), preferenze);
         return NoContent();
     }
+
+    [HttpGet("impostazioni")]
+    public async Task<IActionResult> GetImpostazioni()
+    {
+        var userId = GetUserId();
+        var imp = await _context.ImpostazioniNotificaUtente
+            .FirstOrDefaultAsync(i => i.UserId == userId);
+
+        return Ok(new { giorniRetention = imp?.GiorniRetention ?? 90 });
+    }
+
+    [HttpPost("seed")]
+    public async Task<IActionResult> SeedNotifiche()
+    {
+        var userId = GetUserId();
+        var service = HttpContext.RequestServices.GetRequiredService<INotificaService>();
+
+        await service.InviaAsync(userId, "Anagrafica.Creata",
+            "Nuovo contatto: Mario Rossi",
+            "È stato creato un nuovo contatto nell'anagrafica.",
+            "/anagrafica/1");
+
+        await service.InviaAsync(userId, "Anagrafica.Modificata",
+            "Contatto aggiornato: Luigi Bianchi",
+            "I dati del contatto Luigi Bianchi sono stati modificati.",
+            "/anagrafica/2");
+
+        await service.InviaAsync(userId, "Anagrafica.Eliminata",
+            "Contatto eliminato: Anna Verdi",
+            "Il contatto Anna Verdi è stato rimosso dall'anagrafica.");
+
+        await service.InviaAsync(userId, "Anagrafica.Creata",
+            "Nuovo contatto: Gianluca Neri",
+            "È stato creato un nuovo contatto: Gianluca Neri S.r.l.",
+            "/anagrafica/4");
+
+        await service.InviaAsync(userId, "Anagrafica.Modificata",
+            "Indirizzo aggiornato: Mario Rossi",
+            "L'indirizzo di Mario Rossi è stato modificato.",
+            "/anagrafica/1");
+
+        return Ok(new { message = "5 notifiche di test create." });
+    }
+
+    [HttpPut("impostazioni")]
+    public async Task<IActionResult> SalvaImpostazioni([FromBody] ImpostazioniRequest request)
+    {
+        var userId = GetUserId();
+        var imp = await _context.ImpostazioniNotificaUtente
+            .FirstOrDefaultAsync(i => i.UserId == userId);
+
+        if (imp is null)
+        {
+            imp = new Domain.Entities.Notifications.ImpostazioniNotificaUtente
+            {
+                UserId = userId,
+                GiorniRetention = request.GiorniRetention
+            };
+            _context.ImpostazioniNotificaUtente.Add(imp);
+        }
+        else
+        {
+            imp.GiorniRetention = request.GiorniRetention;
+        }
+
+        await _context.SaveChangesAsync();
+        return NoContent();
+    }
 }
+
+public record BulkDeleteRequest(List<int> Ids);
+public record ImpostazioniRequest(int GiorniRetention);

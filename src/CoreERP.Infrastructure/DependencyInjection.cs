@@ -52,8 +52,10 @@ public static class DependencyInjection
         // Notification Services
         services.AddScoped<INotificaRepository, NotificaRepository>();
         services.AddScoped<IPreferenzaNotificaRepository, PreferenzaNotificaRepository>();
+        services.AddScoped<ISottoscrizioneNotificaRepository, SottoscrizioneNotificaRepository>();
         services.AddScoped<ITeamsNotificationService, TeamsNotificationService>();
         services.AddScoped<INotificaService, NotificaService>();
+        services.AddHostedService<NotificaCleanupService>();
 
         return services;
     }

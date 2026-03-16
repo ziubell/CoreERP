@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { PreferenzaNotificaApi, TipoNotificaApi } from '@/types/notifiche'
+import type { PreferenzaNotificaApi } from '@/types/notifiche'
 import { useNotificheStore } from '@/stores/notifiche'
 import { $api } from '@/utils/api'
 
@@ -8,8 +8,17 @@ const snackbar = ref({ show: false, message: '', color: 'success' })
 const loading = ref(true)
 const saving = ref(false)
 
-// Check if user has Microsoft linked (from profile/cookie)
 const hasMicrosoft = ref(false)
+const giorniRetention = ref(90)
+
+const retentionOptions = [
+  { title: '30 giorni', value: 30 },
+  { title: '60 giorni', value: 60 },
+  { title: '90 giorni', value: 90 },
+  { title: '180 giorni', value: 180 },
+  { title: '1 anno', value: 365 },
+  { title: 'Mai', value: 0 },
+]
 
 interface PreferenzaRow {
   tipoNotificaId: number
@@ -23,7 +32,6 @@ interface PreferenzaRow {
 
 const preferenzeRows = ref<PreferenzaRow[]>([])
 
-// Group by module
 const moduliRaggruppati = computed(() => {
   const grouped: Record<string, PreferenzaRow[]> = {}
   for (const row of preferenzeRows.value) {
@@ -36,7 +44,6 @@ const moduliRaggruppati = computed(() => {
 
 onMounted(async () => {
   try {
-    // Check if user has Microsoft account linked
     try {
       const profile = await $api<{ microsoftLinked: boolean }>('/profile/me')
       hasMicrosoft.value = profile.microsoftLinked
@@ -45,12 +52,14 @@ onMounted(async () => {
       hasMicrosoft.value = false
     }
 
-    await Promise.all([
+    const [, , impostazioni] = await Promise.all([
       store.fetchTipiNotifica(),
       store.fetchPreferenze(),
+      store.fetchImpostazioni(),
     ])
 
-    // Build rows from notification types + user preferences
+    giorniRetention.value = impostazioni.giorniRetention
+
     preferenzeRows.value = store.tipiNotifica.map(tipo => {
       const pref = store.preferenze.find(p => p.tipoNotificaId === tipo.id)
       return {
@@ -78,7 +87,12 @@ const saveNotifications = async () => {
       browser: row.browser,
       teams: row.teams,
     }))
-    await store.salvaPreferenze(prefs)
+
+    await Promise.all([
+      store.salvaPreferenze(prefs),
+      store.salvaImpostazioni(giorniRetention.value),
+    ])
+
     showSnackbar('Preferenze notifiche salvate.', 'success')
   }
   catch {
@@ -106,87 +120,108 @@ const showSnackbar = (message: string, color: string) => {
             <VProgressCircular indeterminate />
           </div>
 
-          <template v-else-if="preferenzeRows.length > 0">
-            <template
-              v-for="(rows, modulo) in moduliRaggruppati"
-              :key="modulo"
-            >
-              <h6 class="text-h6 mb-3 mt-4">
-                {{ modulo }}
-              </h6>
+          <template v-else>
+            <!-- Retention setting -->
+            <h6 class="text-h6 mb-3">
+              Pulizia automatica
+            </h6>
+            <VRow>
+              <VCol
+                cols="12"
+                sm="4"
+              >
+                <VSelect
+                  v-model="giorniRetention"
+                  :items="retentionOptions"
+                  label="Elimina notifiche dopo"
+                  density="compact"
+                  hide-details
+                />
+              </VCol>
+            </VRow>
 
-              <VTable class="text-no-wrap mb-4">
-                <thead>
-                  <tr>
-                    <th scope="col">
-                      Tipo
-                    </th>
-                    <th
-                      scope="col"
-                      class="text-center"
+            <template v-if="preferenzeRows.length > 0">
+              <template
+                v-for="(rows, modulo) in moduliRaggruppati"
+                :key="modulo"
+              >
+                <h6 class="text-h6 mb-3 mt-6">
+                  {{ modulo }}
+                </h6>
+
+                <VTable class="text-no-wrap mb-4">
+                  <thead>
+                    <tr>
+                      <th scope="col">
+                        Tipo
+                      </th>
+                      <th
+                        scope="col"
+                        class="text-center"
+                      >
+                        Email
+                      </th>
+                      <th
+                        scope="col"
+                        class="text-center"
+                      >
+                        Browser
+                      </th>
+                      <th
+                        v-if="hasMicrosoft"
+                        scope="col"
+                        class="text-center"
+                      >
+                        Teams
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="row in rows"
+                      :key="row.tipoNotificaId"
                     >
-                      Email
-                    </th>
-                    <th
-                      scope="col"
-                      class="text-center"
-                    >
-                      Browser
-                    </th>
-                    <th
-                      v-if="hasMicrosoft"
-                      scope="col"
-                      class="text-center"
-                    >
-                      Teams
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="row in rows"
-                    :key="row.tipoNotificaId"
-                  >
-                    <td>{{ row.descrizione }}</td>
-                    <td class="text-center">
-                      <VCheckbox
-                        v-model="row.email"
-                        density="compact"
-                        hide-details
-                        class="d-inline-flex"
-                      />
-                    </td>
-                    <td class="text-center">
-                      <VCheckbox
-                        v-model="row.browser"
-                        density="compact"
-                        hide-details
-                        class="d-inline-flex"
-                      />
-                    </td>
-                    <td
-                      v-if="hasMicrosoft"
-                      class="text-center"
-                    >
-                      <VCheckbox
-                        v-model="row.teams"
-                        density="compact"
-                        hide-details
-                        class="d-inline-flex"
-                      />
-                    </td>
-                  </tr>
-                </tbody>
-              </VTable>
+                      <td>{{ row.descrizione }}</td>
+                      <td class="text-center">
+                        <VCheckbox
+                          v-model="row.email"
+                          density="compact"
+                          hide-details
+                          class="d-inline-flex"
+                        />
+                      </td>
+                      <td class="text-center">
+                        <VCheckbox
+                          v-model="row.browser"
+                          density="compact"
+                          hide-details
+                          class="d-inline-flex"
+                        />
+                      </td>
+                      <td
+                        v-if="hasMicrosoft"
+                        class="text-center"
+                      >
+                        <VCheckbox
+                          v-model="row.teams"
+                          density="compact"
+                          hide-details
+                          class="d-inline-flex"
+                        />
+                      </td>
+                    </tr>
+                  </tbody>
+                </VTable>
+              </template>
             </template>
-          </template>
 
-          <p
-            v-else
-            class="text-medium-emphasis pa-4"
-          >
-            Nessun tipo di notifica disponibile.
-          </p>
+            <p
+              v-else
+              class="text-medium-emphasis pa-4 mt-4"
+            >
+              Nessun tipo di notifica disponibile.
+            </p>
+          </template>
         </VCardText>
 
         <VDivider />
@@ -205,7 +240,6 @@ const showSnackbar = (message: string, color: string) => {
     </VCol>
   </VRow>
 
-  <!-- Snackbar -->
   <VSnackbar
     v-model="snackbar.show"
     :color="snackbar.color"

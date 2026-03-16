@@ -13,6 +13,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationIdentityUser>
     public DbSet<TipoNotifica> TipiNotifica => Set<TipoNotifica>();
     public DbSet<Notifica> Notifiche => Set<Notifica>();
     public DbSet<PreferenzaNotificaUtente> PreferenzeNotificaUtente => Set<PreferenzaNotificaUtente>();
+    public DbSet<SottoscrizioneNotifica> SottoscrizioniNotifica => Set<SottoscrizioneNotifica>();
+    public DbSet<ImpostazioniNotificaUtente> ImpostazioniNotificaUtente => Set<ImpostazioniNotificaUtente>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -48,6 +50,22 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationIdentityUser>
             entity.HasIndex(e => new { e.UserId, e.TipoNotificaId }).IsUnique();
             entity.Property(e => e.UserId).HasMaxLength(450).IsRequired();
             entity.HasOne(e => e.TipoNotifica).WithMany().HasForeignKey(e => e.TipoNotificaId);
+        });
+
+        builder.Entity<SottoscrizioneNotifica>(entity =>
+        {
+            entity.ToTable("SottoscrizioniNotifica");
+            entity.HasIndex(e => new { e.UserId, e.EntitaTipo, e.EntitaId }).IsUnique();
+            entity.HasIndex(e => new { e.EntitaTipo, e.EntitaId });
+            entity.Property(e => e.UserId).HasMaxLength(450).IsRequired();
+            entity.Property(e => e.EntitaTipo).HasMaxLength(100).IsRequired();
+        });
+
+        builder.Entity<ImpostazioniNotificaUtente>(entity =>
+        {
+            entity.ToTable("ImpostazioniNotificaUtente");
+            entity.HasIndex(e => e.UserId).IsUnique();
+            entity.Property(e => e.UserId).HasMaxLength(450).IsRequired();
         });
     }
 

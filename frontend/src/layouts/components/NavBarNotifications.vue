@@ -79,5 +79,6 @@ const handleNotificationClick = (notification: Notification) => {
     @read="markRead"
     @unread="markUnRead"
     @click:notification="handleNotificationClick"
+    @click:view-all="useRouter().push('/notifiche')"
   />
 </template>
