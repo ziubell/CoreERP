@@ -22,19 +22,33 @@ public class NotificaCleanupService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Wait for the application to fully start before first run
+        await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
                 await PulisciNotificheAsync(stoppingToken);
             }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                // Application is shutting down, exit gracefully
+                return;
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Errore durante la pulizia delle notifiche");
             }
 
-            // Run once per day
-            await Task.Delay(TimeSpan.FromHours(24), stoppingToken);
+            try
+            {
+                await Task.Delay(TimeSpan.FromHours(24), stoppingToken);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
         }
     }
 
@@ -43,7 +57,6 @@ public class NotificaCleanupService : BackgroundService
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-        // Get all user retention settings
         var impostazioni = await context.ImpostazioniNotificaUtente
             .Where(i => i.GiorniRetention > 0)
             .ToListAsync(ct);
@@ -64,20 +77,11 @@ public class NotificaCleanupService : BackgroundService
         var userIdsWithSettings = impostazioni.Select(i => i.UserId).ToHashSet();
         var defaultCutoff = DateTime.UtcNow.AddDays(-DefaultGiorniRetention);
 
-        var userIdsSenzaImpostazioni = await context.Notifiche
+        var count2 = await context.Notifiche
             .Where(n => !userIdsWithSettings.Contains(n.UserId) && n.DataCreazione < defaultCutoff)
-            .Select(n => n.UserId)
-            .Distinct()
-            .ToListAsync(ct);
+            .ExecuteDeleteAsync(ct);
 
-        if (userIdsSenzaImpostazioni.Count > 0)
-        {
-            var count = await context.Notifiche
-                .Where(n => !userIdsWithSettings.Contains(n.UserId) && n.DataCreazione < defaultCutoff)
-                .ExecuteDeleteAsync(ct);
-
-            totalEliminate += count;
-        }
+        totalEliminate += count2;
 
         if (totalEliminate > 0)
             _logger.LogInformation("Pulizia notifiche completata: {Count} notifiche eliminate", totalEliminate);
