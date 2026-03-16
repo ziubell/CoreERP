@@ -9,6 +9,21 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Load .env file for local secrets (not committed to git)
+var envFile = Path.Combine(builder.Environment.ContentRootPath, ".env");
+if (File.Exists(envFile))
+{
+    foreach (var line in File.ReadAllLines(envFile))
+    {
+        var trimmed = line.Trim();
+        if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith('#'))
+            continue;
+        var idx = trimmed.IndexOf('=');
+        if (idx > 0)
+            Environment.SetEnvironmentVariable(trimmed[..idx], trimmed[(idx + 1)..]);
+    }
+}
+
 // Serilog
 builder.Host.UseSerilog((context, config) =>
     config.ReadFrom.Configuration(context.Configuration));
