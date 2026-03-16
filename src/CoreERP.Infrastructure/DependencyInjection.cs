@@ -1,6 +1,9 @@
+using CoreERP.Application.Interfaces;
 using CoreERP.Infrastructure.Email;
 using CoreERP.Infrastructure.Identity;
 using CoreERP.Infrastructure.Persistence;
+using CoreERP.Infrastructure.Persistence.Repositories;
+using CoreERP.Infrastructure.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -42,6 +45,17 @@ public static class DependencyInjection
 
         // Email Service
         services.AddScoped<IEmailService, SmtpEmailService>();
+
+        // SignalR
+        services.AddSignalR();
+
+        // Notification Services
+        services.AddScoped<INotificaRepository, NotificaRepository>();
+        services.AddScoped<IPreferenzaNotificaRepository, PreferenzaNotificaRepository>();
+        services.AddScoped<ISottoscrizioneNotificaRepository, SottoscrizioneNotificaRepository>();
+        services.AddScoped<ITeamsNotificationService, TeamsNotificationService>();
+        services.AddScoped<INotificaService, NotificaService>();
+        services.AddHostedService<NotificaCleanupService>();
 
         return services;
     }
