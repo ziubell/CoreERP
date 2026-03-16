@@ -1,5 +1,4 @@
-using CoreERP.Application.Common.Interfaces;
-using CoreERP.Domain.Interfaces.Services;
+using CoreERP.Infrastructure.Email;
 using CoreERP.Infrastructure.Identity;
 using CoreERP.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
@@ -19,13 +18,9 @@ public static class DependencyInjection
                 configuration.GetConnectionString("DefaultConnection"),
                 sqlOptions =>
                 {
-                    sqlOptions.UseNetTopologySuite();
                     sqlOptions.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName);
                     sqlOptions.EnableRetryOnFailure(maxRetryCount: 3);
                 }));
-
-        services.AddScoped<IApplicationDbContext>(provider =>
-            provider.GetRequiredService<ApplicationDbContext>());
 
         // Identity
         services.AddIdentity<ApplicationIdentityUser, IdentityRole>(options =>
@@ -41,28 +36,12 @@ public static class DependencyInjection
         .AddEntityFrameworkStores<ApplicationDbContext>()
         .AddDefaultTokenProviders();
 
-        // Services
-        services.AddScoped<ICurrentUserService, CurrentUserService>();
+        // Microsoft Graph Service
+        services.AddHttpClient();
+        services.AddScoped<IMicrosoftGraphService, MicrosoftGraphService>();
 
-        // Redis Cache
-        var redisConnection = configuration.GetConnectionString("Redis");
-        if (!string.IsNullOrWhiteSpace(redisConnection))
-        {
-            services.AddStackExchangeRedisCache(options =>
-            {
-                options.Configuration = redisConnection;
-                options.InstanceName = "CoreERP:";
-            });
-        }
-        else
-        {
-            services.AddDistributedMemoryCache();
-        }
-
-        // Hangfire
-        services.AddHangfire(config =>
-            config.UseSqlServerStorage(configuration.GetConnectionString("DefaultConnection")));
-        services.AddHangfireServer();
+        // Email Service
+        services.AddScoped<IEmailService, SmtpEmailService>();
 
         return services;
     }

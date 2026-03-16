@@ -1,8 +1,6 @@
 using System.Globalization;
 using System.Text;
-using Asp.Versioning;
 using CoreERP.Api.Middleware;
-using CoreERP.Application;
 using CoreERP.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -10,6 +8,27 @@ using Microsoft.OpenApi.Models;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Load .env file for local secrets (not committed to git)
+var envFile = Path.Combine(builder.Environment.ContentRootPath, ".env");
+if (File.Exists(envFile))
+{
+    var envVars = new Dictionary<string, string?>();
+    foreach (var line in File.ReadAllLines(envFile))
+    {
+        var trimmed = line.Trim();
+        if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith('#'))
+            continue;
+        var idx = trimmed.IndexOf('=');
+        if (idx > 0)
+        {
+            // Convert AzureAd__ClientSecret to AzureAd:ClientSecret for .NET config
+            var key = trimmed[..idx].Replace("__", ":");
+            envVars[key] = trimmed[(idx + 1)..];
+        }
+    }
+    builder.Configuration.AddInMemoryCollection(envVars);
+}
 
 // Serilog
 builder.Host.UseSerilog((context, config) =>
@@ -20,8 +39,7 @@ var cultureInfo = new CultureInfo("it-IT") { NumberFormat = { CurrencySymbol = "
 CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
 CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
 
-// Application & Infrastructure layers
-builder.Services.AddApplication();
+// Infrastructure layer (DB + Identity)
 builder.Services.AddInfrastructure(builder.Configuration);
 
 // Authentication - JWT Bearer
@@ -46,20 +64,6 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddAuthorization();
-
-// API Versioning
-builder.Services.AddApiVersioning(options =>
-{
-    options.DefaultApiVersion = new ApiVersion(1, 0);
-    options.AssumeDefaultVersionWhenUnspecified = true;
-    options.ReportApiVersions = true;
-    options.ApiVersionReader = new UrlSegmentApiVersionReader();
-})
-.AddApiExplorer(options =>
-{
-    options.GroupNameFormat = "'v'VVV";
-    options.SubstituteApiVersionInUrl = true;
-});
 
 // Controllers
 builder.Services.AddControllers();
@@ -99,7 +103,7 @@ builder.Services.AddSwaggerGen(options =>
 // CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowReactApp", policy =>
+    options.AddPolicy("AllowFrontend", policy =>
     {
         policy
             .WithOrigins(builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? ["http://localhost:5173"])
@@ -112,10 +116,20 @@ builder.Services.AddCors(options =>
 // Health checks
 builder.Services.AddHealthChecks();
 
-// SignalR
-builder.Services.AddSignalR();
-
 var app = builder.Build();
+
+// Database seeding
+if (app.Environment.IsDevelopment())
+{
+    try
+    {
+        await CoreERP.Infrastructure.Persistence.DatabaseSeeder.SeedAsync(app.Services);
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "Errore durante il seed del database");
+    }
+}
 
 // Middleware pipeline
 app.UseMiddleware<ExceptionHandlingMiddleware>();
@@ -130,12 +144,24 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors("AllowReactApp");
+app.UseCors("AllowFrontend");
+
+// Serve uploaded files (profile photos, etc.)
+var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "uploads");
+if (!Directory.Exists(uploadsPath))
+    Directory.CreateDirectory(uploadsPath);
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(uploadsPath),
+    RequestPath = "/uploads"
+});
+
+app.UseSerilogRequestLogging();
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health");
-
-app.UseSerilogRequestLogging();
 
 app.Run();

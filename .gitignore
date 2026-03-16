@@ -1,0 +1,28 @@
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstats
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Bb]in/
+[Oo]bj/
+
+# NuGet
+**/packages/*
+*.nupkg
+**/[Pp]ackages/build/
+
+# Secrets / local dev settings
+**/appsettings.Development.json
+**/.env
+
+# Misc
+*.log
+*.tmp
+/src/CoreERP.Api/uploads/avatars/dcff23ad-27fe-460e-8d68-00c34df03599_1773662855.png

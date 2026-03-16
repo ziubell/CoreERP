@@ -16,5 +16,13 @@ public class ApplicationIdentityUser : IdentityUser
     public DateTime? DataUltimoLogin { get; set; }
     public string? Token { get; set; }
 
+    // Microsoft 365 integration
+    public string? MicrosoftId { get; set; }
+    public string? MicrosoftEmail { get; set; }
+    public DateTime? DataCollegamentoMicrosoft { get; set; }
+    public string? MicrosoftAccessToken { get; set; }
+    public string? MicrosoftRefreshToken { get; set; }
+    public DateTime? MicrosoftTokenExpiry { get; set; }
+
     public string NomeCompleto => $"{Nome} {Cognome}".Trim();
 }
