@@ -50,7 +50,12 @@ export const canNavigate = (to: RouteLocationNormalized) => {
   if (targetRoute?.meta?.action && targetRoute?.meta?.subject)
     return ability.can(targetRoute.meta.action, targetRoute.meta.subject)
 
-  // If no specific permissions, fall back to checking if any parent route allows access
+  // If no route in the chain defines action/subject, allow access (no permission required)
+  const hasAnyPermissionDefined = to.matched.some(route => route.meta.action && route.meta.subject)
+  if (!hasAnyPermissionDefined)
+    return true
+
+  // If some parent defines permissions, check if any allows access
   // @ts-expect-error We should allow passing string | undefined to can because for admin ability we omit defining action & subject
   return to.matched.some(route => ability.can(route.meta.action, route.meta.subject))
 }
