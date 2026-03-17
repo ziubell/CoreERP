@@ -1,6 +1,10 @@
+using CoreERP.Application.Interfaces;
+using CoreERP.Infrastructure.Configuration;
 using CoreERP.Infrastructure.Email;
 using CoreERP.Infrastructure.Identity;
 using CoreERP.Infrastructure.Persistence;
+using CoreERP.Infrastructure.Persistence.Repositories;
+using CoreERP.Infrastructure.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -19,7 +23,7 @@ public static class DependencyInjection
                 sqlOptions =>
                 {
                     sqlOptions.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName);
-                    sqlOptions.EnableRetryOnFailure(maxRetryCount: 3);
+                    sqlOptions.EnableRetryOnFailure(maxRetryCount: 2);
                 }));
 
         // Identity
@@ -42,6 +46,22 @@ public static class DependencyInjection
 
         // Email Service
         services.AddScoped<IEmailService, SmtpEmailService>();
+
+        // SignalR
+        services.AddSignalR();
+
+        // Teams Module Configuration
+        services.Configure<TeamsOptions>(configuration.GetSection(TeamsOptions.SectionName));
+        services.AddSingleton<ITeamsConfigurationService, TeamsConfigurationService>();
+
+
+        // Notification Services
+        services.AddScoped<INotificaRepository, NotificaRepository>();
+        services.AddScoped<IPreferenzaNotificaRepository, PreferenzaNotificaRepository>();
+        services.AddScoped<ISottoscrizioneNotificaRepository, SottoscrizioneNotificaRepository>();
+        services.AddScoped<ITeamsNotificationService, TeamsNotificationService>();
+        services.AddScoped<INotificaService, NotificaService>();
+        services.AddHostedService<NotificaCleanupService>();
 
         return services;
     }

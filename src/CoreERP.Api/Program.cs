@@ -2,12 +2,17 @@ using System.Globalization;
 using System.Text;
 using CoreERP.Api.Middleware;
 using CoreERP.Infrastructure;
+using CoreERP.Infrastructure.Hubs;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
 
+Console.WriteLine("[CoreERP] === AVVIO APPLICAZIONE ===");
+
 var builder = WebApplication.CreateBuilder(args);
+
+Console.WriteLine($"[CoreERP] Builder creato - Ambiente: {builder.Environment.EnvironmentName}");
 
 // Load .env file for local secrets (not committed to git)
 var envFile = Path.Combine(builder.Environment.ContentRootPath, ".env");
@@ -60,6 +65,18 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = builder.Configuration["Jwt:Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? "CoreERP-Development-Key-Change-In-Production-!"))
+    };
+
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/notifiche"))
+                context.Token = accessToken;
+            return Task.CompletedTask;
+        }
     };
 });
 
@@ -121,12 +138,15 @@ var app = builder.Build();
 // Database seeding
 if (app.Environment.IsDevelopment())
 {
+    Console.WriteLine("[CoreERP] Seed database in corso...");
     try
     {
         await CoreERP.Infrastructure.Persistence.DatabaseSeeder.SeedAsync(app.Services);
+        Console.WriteLine("[CoreERP] Seed database completato.");
     }
     catch (Exception ex)
     {
+        Console.WriteLine($"[CoreERP] ERRORE seed database: {ex.Message}");
         app.Logger.LogError(ex, "Errore durante il seed del database");
     }
 }
@@ -162,6 +182,8 @@ app.UseSerilogRequestLogging();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<NotificaHub>("/hubs/notifiche");
 app.MapHealthChecks("/health");
 
+Console.WriteLine("[CoreERP] Server pronto, avvio in corso...");
 app.Run();

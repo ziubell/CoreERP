@@ -9,8 +9,8 @@ import { AppContentLayoutNav, ContentWidth, FooterType, NavbarType } from '@layo
 
 export const { themeConfig, layoutConfig } = defineThemeConfig({
   app: {
-    title: 'Spadhausen',
-    logo: h('img', { src: logoIcon, alt: 'Spadhausen', style: 'height: 28px; width: auto;' }),
+    title: 'CoreERP',
+    logo: h('img', { src: logoIcon, alt: 'CoreERP', style: 'height: 28px; width: auto;' }),
     contentWidth: ContentWidth.Fluid,
     contentLayoutNav: AppContentLayoutNav.Vertical,
     overlayNavFromBreakpoint: breakpointsVuetifyV3.lg - 1, // 1 for matching with vuetify breakpoint. Docs: https://next.vuetifyjs.com/en/features/display-and-platform/

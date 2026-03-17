@@ -1,0 +1,64 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.17",
+  "version": "1.0.0",
+  "id": "d83ed3b3-309c-4097-9413-550df46483ba",
+  "developer": {
+    "name": "Spadhausen",
+    "websiteUrl": "https://erp.spadhausen.com",
+    "privacyUrl": "https://erp.spadhausen.com/privacy",
+    "termsOfUseUrl": "https://erp.spadhausen.com/terms"
+  },
+  "name": {
+    "short": "CoreERP",
+    "full": "CoreERP Notifications"
+  },
+  "description": {
+    "short": "Notifiche CoreERP su Teams",
+    "full": "Ricevi notifiche in tempo reale dal sistema CoreERP direttamente nel feed attività di Microsoft Teams."
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "accentColor": "#003366",
+  "bots": [
+    {
+      "botId": "346b45f2-ab22-43d8-907c-612e4bff9883",
+      "scopes": [
+        "personal"
+      ],
+      "supportsFiles": false,
+      "isNotificationOnly": true
+    }
+  ],
+  "permissions": [
+    "identity",
+    "messageTeamMembers"
+  ],
+  "staticTabs": [
+    {
+      "entityId": "notifications",
+      "name": "CoreERP",
+      "contentUrl": "https://erp.spadhausen.com",
+      "websiteUrl": "https://erp.spadhausen.com",
+      "scopes": ["personal"]
+    }
+  ],
+  "validDomains": [
+    "erp.spadhausen.com"
+  ],
+  "activities": {
+    "activityTypes": [
+      {
+        "type": "coreErpNotifica",
+        "description": "Notifica da CoreERP",
+        "templateText": "{titolo}"
+      }
+    ]
+  },
+  "webApplicationInfo": {
+    "id": "dde634fa-6e02-4a0f-b4ca-ef427ec34147",
+    "resource": "api://erp.spadhausen.com/dde634fa-6e02-4a0f-b4ca-ef427ec34147"
+  }
+}

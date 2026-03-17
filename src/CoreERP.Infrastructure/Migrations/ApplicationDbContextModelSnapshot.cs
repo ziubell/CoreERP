@@ -22,6 +22,203 @@ namespace CoreERP.Infrastructure.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("CoreERP.Domain.Entities.Notifications.ImpostazioniNotificaUtente", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("GiorniRetention")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("ImpostazioniNotificaUtente", (string)null);
+                });
+
+            modelBuilder.Entity("CoreERP.Domain.Entities.Notifications.Notifica", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CreatoDA")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("DataCreazione")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DataLettura")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DataModifica")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("Letta")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Link")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Messaggio")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("MittenteUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ModificatoDa")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("TipoNotificaId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Titolo")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DataCreazione");
+
+                    b.HasIndex("TipoNotificaId");
+
+                    b.HasIndex("UserId", "Letta");
+
+                    b.ToTable("Notifiche", (string)null);
+                });
+
+            modelBuilder.Entity("CoreERP.Domain.Entities.Notifications.PreferenzaNotificaUtente", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Browser")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("Email")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("Teams")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("TipoNotificaId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TipoNotificaId");
+
+                    b.HasIndex("UserId", "TipoNotificaId")
+                        .IsUnique();
+
+                    b.ToTable("PreferenzeNotificaUtente", (string)null);
+                });
+
+            modelBuilder.Entity("CoreERP.Domain.Entities.Notifications.SottoscrizioneNotifica", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("DataSottoscrizione")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("EntitaId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("EntitaTipo")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EntitaTipo", "EntitaId");
+
+                    b.HasIndex("UserId", "EntitaTipo", "EntitaId")
+                        .IsUnique();
+
+                    b.ToTable("SottoscrizioniNotifica", (string)null);
+                });
+
+            modelBuilder.Entity("CoreERP.Domain.Entities.Notifications.TipoNotifica", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Attivo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Codice")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Colore")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Descrizione")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Icona")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Modulo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Codice")
+                        .IsUnique();
+
+                    b.ToTable("TipiNotifica", (string)null);
+                });
+
             modelBuilder.Entity("CoreERP.Infrastructure.Identity.ApplicationIdentityUser", b =>
                 {
                     b.Property<string>("Id")
@@ -269,6 +466,28 @@ namespace CoreERP.Infrastructure.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
+                });
+
+            modelBuilder.Entity("CoreERP.Domain.Entities.Notifications.Notifica", b =>
+                {
+                    b.HasOne("CoreERP.Domain.Entities.Notifications.TipoNotifica", "TipoNotifica")
+                        .WithMany()
+                        .HasForeignKey("TipoNotificaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("TipoNotifica");
+                });
+
+            modelBuilder.Entity("CoreERP.Domain.Entities.Notifications.PreferenzaNotificaUtente", b =>
+                {
+                    b.HasOne("CoreERP.Domain.Entities.Notifications.TipoNotifica", "TipoNotifica")
+                        .WithMany()
+                        .HasForeignKey("TipoNotificaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("TipoNotifica");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
