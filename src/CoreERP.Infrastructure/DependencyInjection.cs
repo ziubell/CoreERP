@@ -1,4 +1,5 @@
 using CoreERP.Application.Interfaces;
+using CoreERP.Infrastructure.Configuration;
 using CoreERP.Infrastructure.Email;
 using CoreERP.Infrastructure.Identity;
 using CoreERP.Infrastructure.Persistence;
@@ -22,7 +23,7 @@ public static class DependencyInjection
                 sqlOptions =>
                 {
                     sqlOptions.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName);
-                    sqlOptions.EnableRetryOnFailure(maxRetryCount: 3);
+                    sqlOptions.EnableRetryOnFailure(maxRetryCount: 2);
                 }));
 
         // Identity
@@ -48,6 +49,11 @@ public static class DependencyInjection
 
         // SignalR
         services.AddSignalR();
+
+        // Teams Module Configuration
+        services.Configure<TeamsOptions>(configuration.GetSection(TeamsOptions.SectionName));
+        services.AddSingleton<ITeamsConfigurationService, TeamsConfigurationService>();
+
 
         // Notification Services
         services.AddScoped<INotificaRepository, NotificaRepository>();

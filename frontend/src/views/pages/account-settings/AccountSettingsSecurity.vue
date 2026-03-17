@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { useNotificheStore } from '@/stores/notifiche'
+
+const notificheStore = useNotificheStore()
 const isCurrentPasswordVisible = ref(false)
 const isNewPasswordVisible = ref(false)
 const isConfirmPasswordVisible = ref(false)
 const isLoading = ref(false)
-const snackbar = ref({ show: false, message: '', color: 'success' })
 
 const passwordForm = ref({
   currentPassword: '',
@@ -136,7 +138,7 @@ const formatDate = (dateStr: string | null) => {
 }
 
 const showSnackbar = (message: string, color: string) => {
-  snackbar.value = { show: true, message, color }
+  notificheStore.addToast(message, null, null, color)
 }
 </script>
 
@@ -364,13 +366,4 @@ const showSnackbar = (message: string, color: string) => {
     </VCard>
   </VDialog>
 
-  <!-- Snackbar -->
-  <VSnackbar
-    v-model="snackbar.show"
-    :color="snackbar.color"
-    location="top end"
-    :timeout="3000"
-  >
-    {{ snackbar.message }}
-  </VSnackbar>
 </template>

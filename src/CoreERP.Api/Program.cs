@@ -8,7 +8,11 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
 
+Console.WriteLine("[CoreERP] === AVVIO APPLICAZIONE ===");
+
 var builder = WebApplication.CreateBuilder(args);
+
+Console.WriteLine($"[CoreERP] Builder creato - Ambiente: {builder.Environment.EnvironmentName}");
 
 // Load .env file for local secrets (not committed to git)
 var envFile = Path.Combine(builder.Environment.ContentRootPath, ".env");
@@ -134,12 +138,15 @@ var app = builder.Build();
 // Database seeding
 if (app.Environment.IsDevelopment())
 {
+    Console.WriteLine("[CoreERP] Seed database in corso...");
     try
     {
         await CoreERP.Infrastructure.Persistence.DatabaseSeeder.SeedAsync(app.Services);
+        Console.WriteLine("[CoreERP] Seed database completato.");
     }
     catch (Exception ex)
     {
+        Console.WriteLine($"[CoreERP] ERRORE seed database: {ex.Message}");
         app.Logger.LogError(ex, "Errore durante il seed del database");
     }
 }
@@ -178,4 +185,5 @@ app.MapControllers();
 app.MapHub<NotificaHub>("/hubs/notifiche");
 app.MapHealthChecks("/health");
 
+Console.WriteLine("[CoreERP] Server pronto, avvio in corso...");
 app.Run();

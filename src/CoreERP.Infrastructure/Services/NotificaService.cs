@@ -21,6 +21,7 @@ public class NotificaService : INotificaService
     private readonly IHubContext<NotificaHub> _hubContext;
     private readonly IEmailService _emailService;
     private readonly ITeamsNotificationService _teamsService;
+    private readonly ITeamsConfigurationService _teamsConfig;
     private readonly UserManager<ApplicationIdentityUser> _userManager;
     private readonly ISottoscrizioneNotificaRepository _sottoscrizioneRepository;
     private readonly ILogger<NotificaService> _logger;
@@ -35,6 +36,7 @@ public class NotificaService : INotificaService
         IHubContext<NotificaHub> hubContext,
         IEmailService emailService,
         ITeamsNotificationService teamsService,
+        ITeamsConfigurationService teamsConfig,
         UserManager<ApplicationIdentityUser> userManager,
         ILogger<NotificaService> logger)
     {
@@ -45,6 +47,7 @@ public class NotificaService : INotificaService
         _hubContext = hubContext;
         _emailService = emailService;
         _teamsService = teamsService;
+        _teamsConfig = teamsConfig;
         _userManager = userManager;
         _logger = logger;
     }
@@ -68,7 +71,6 @@ public class NotificaService : INotificaService
             Titolo = titolo,
             Messaggio = messaggio,
             Link = link,
-            TipoNotifica = tipo
         };
 
         await _notificaRepository.AddAsync(notifica);
@@ -134,7 +136,7 @@ public class NotificaService : INotificaService
             }
         }
 
-        if (inviaTeams)
+        if (inviaTeams && _teamsConfig.IsEnabled)
         {
             try
             {

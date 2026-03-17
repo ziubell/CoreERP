@@ -3,12 +3,13 @@ import type { PreferenzaNotificaApi } from '@/types/notifiche'
 import { useNotificheStore } from '@/stores/notifiche'
 import { $api } from '@/utils/api'
 
+
 const store = useNotificheStore()
-const snackbar = ref({ show: false, message: '', color: 'success' })
 const loading = ref(true)
 const saving = ref(false)
 
 const hasMicrosoft = ref(false)
+const teamsModuleEnabled = ref(false)
 const giorniRetention = ref(90)
 
 const retentionOptions = [
@@ -19,6 +20,7 @@ const retentionOptions = [
   { title: '1 anno', value: 365 },
   { title: 'Mai', value: 0 },
 ]
+
 
 interface PreferenzaRow {
   tipoNotificaId: number
@@ -45,11 +47,16 @@ const moduliRaggruppati = computed(() => {
 onMounted(async () => {
   try {
     try {
-      const profile = await $api<{ microsoftLinked: boolean }>('/profile/me')
+      const [profile] = await Promise.all([
+        $api<{ microsoftLinked: boolean }>('/profile/me'),
+        store.fetchCanali(),
+      ])
       hasMicrosoft.value = profile.microsoftLinked
+      teamsModuleEnabled.value = store.canali.teams
     }
     catch {
       hasMicrosoft.value = false
+      teamsModuleEnabled.value = false
     }
 
     const [, , impostazioni] = await Promise.all([
@@ -93,19 +100,16 @@ const saveNotifications = async () => {
       store.salvaImpostazioni(giorniRetention.value),
     ])
 
-    showSnackbar('Preferenze notifiche salvate.', 'success')
+    store.addToast('Preferenze notifiche salvate.', null, null, 'success')
   }
   catch {
-    showSnackbar('Errore nel salvataggio delle preferenze.', 'error')
+    store.addToast('Errore nel salvataggio delle preferenze.', null, null, 'error')
   }
   finally {
     saving.value = false
   }
 }
 
-const showSnackbar = (message: string, color: string) => {
-  snackbar.value = { show: true, message, color }
-}
 </script>
 
 <template>
@@ -168,7 +172,7 @@ const showSnackbar = (message: string, color: string) => {
                         Browser
                       </th>
                       <th
-                        v-if="hasMicrosoft"
+                        v-if="teamsModuleEnabled && hasMicrosoft"
                         scope="col"
                         class="text-center"
                       >
@@ -199,7 +203,7 @@ const showSnackbar = (message: string, color: string) => {
                         />
                       </td>
                       <td
-                        v-if="hasMicrosoft"
+                        v-if="teamsModuleEnabled && hasMicrosoft"
                         class="text-center"
                       >
                         <VCheckbox
@@ -240,12 +244,4 @@ const showSnackbar = (message: string, color: string) => {
     </VCol>
   </VRow>
 
-  <VSnackbar
-    v-model="snackbar.show"
-    :color="snackbar.color"
-    location="top end"
-    :timeout="3000"
-  >
-    {{ snackbar.message }}
-  </VSnackbar>
 </template>

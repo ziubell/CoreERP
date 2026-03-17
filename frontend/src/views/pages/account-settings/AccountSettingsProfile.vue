@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import Cropper from 'cropperjs'
 import 'cropperjs/dist/cropper.css'
+import { useNotificheStore } from '@/stores/notifiche'
 
+const notificheStore = useNotificheStore()
 const userData = useCookie<any>('userData')
 const isLoading = ref(false)
 const isPhotoUploading = ref(false)
-const snackbar = ref({ show: false, message: '', color: 'success' })
 
 // Crop modal
 const showCropDialog = ref(false)
@@ -69,10 +70,10 @@ const saveProfile = async () => {
     if (res.userData)
       userData.value = res.userData
 
-    showSnackbar('Profilo aggiornato con successo.', 'success')
+    notificheStore.addToast('Profilo aggiornato con successo.', null, null, 'success')
   }
   catch {
-    showSnackbar('Errore nell\'aggiornamento del profilo.', 'error')
+    notificheStore.addToast('Errore nell\'aggiornamento del profilo.', null, null, 'error')
   }
   finally {
     isLoading.value = false
@@ -163,10 +164,10 @@ const applyCrop = async () => {
       if (res.userData)
         userData.value = res.userData
 
-      showSnackbar('Foto aggiornata con successo.', 'success')
+      notificheStore.addToast('Foto aggiornata con successo.', null, null, 'success')
     }
     catch {
-      showSnackbar('Errore nel caricamento della foto.', 'error')
+      notificheStore.addToast('Errore nel caricamento della foto.', null, null, 'error')
     }
     finally {
       isPhotoUploading.value = false
@@ -185,15 +186,11 @@ const deletePhoto = async () => {
     if (res.userData)
       userData.value = res.userData
 
-    showSnackbar('Foto rimossa.', 'success')
+    notificheStore.addToast('Foto rimossa.', null, null, 'success')
   }
   catch {
-    showSnackbar('Errore nella rimozione della foto.', 'error')
+    notificheStore.addToast('Errore nella rimozione della foto.', null, null, 'error')
   }
-}
-
-const showSnackbar = (message: string, color: string) => {
-  snackbar.value = { show: true, message, color }
 }
 
 onMounted(fetchProfile)
@@ -426,15 +423,6 @@ onMounted(fetchProfile)
     </VCard>
   </VDialog>
 
-  <!-- Snackbar -->
-  <VSnackbar
-    v-model="snackbar.show"
-    :color="snackbar.color"
-    location="top end"
-    :timeout="3000"
-  >
-    {{ snackbar.message }}
-  </VSnackbar>
 </template>
 
 <style>

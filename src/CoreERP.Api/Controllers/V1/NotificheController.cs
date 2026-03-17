@@ -15,15 +15,18 @@ public class NotificheController : ControllerBase
 {
     private readonly INotificaRepository _notificaRepository;
     private readonly IPreferenzaNotificaRepository _preferenzaRepository;
+    private readonly ITeamsConfigurationService _teamsConfig;
     private readonly ApplicationDbContext _context;
 
     public NotificheController(
         INotificaRepository notificaRepository,
         IPreferenzaNotificaRepository preferenzaRepository,
+        ITeamsConfigurationService teamsConfig,
         ApplicationDbContext context)
     {
         _notificaRepository = notificaRepository;
         _preferenzaRepository = preferenzaRepository;
+        _teamsConfig = teamsConfig;
         _context = context;
     }
 
@@ -130,6 +133,18 @@ public class NotificheController : ControllerBase
 
         return Ok(tipi);
     }
+
+    [HttpGet("canali")]
+    public IActionResult GetCanaliDisponibili()
+    {
+        return Ok(new
+        {
+            email = true,
+            browser = true,
+            teams = _teamsConfig.IsEnabled,
+        });
+    }
+
 
     [HttpGet("preferenze")]
     public async Task<IActionResult> GetPreferenze()

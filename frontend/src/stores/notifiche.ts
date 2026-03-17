@@ -8,7 +8,32 @@ export const useNotificheStore = defineStore('notifiche', () => {
   const nonLette = ref(0)
   const tipiNotifica = ref<TipoNotificaApi[]>([])
   const preferenze = ref<PreferenzaNotificaApi[]>([])
+  const canali = ref<{ email: boolean; browser: boolean; teams: boolean }>({ email: true, browser: true, teams: false })
   const loading = ref(false)
+
+  // Toast queue for stacked notifications
+  interface ToastItem {
+    id: number
+    titolo: string
+    messaggio: string | null
+    link: string | null
+    color: string
+  }
+
+  let toastCounter = 0
+  const toasts = ref<ToastItem[]>([])
+
+  function addToast(titolo: string, messaggio: string | null = null, link: string | null = null, color = 'info') {
+    const id = ++toastCounter
+    const item: ToastItem = { id, titolo, messaggio, link, color }
+    toasts.value.unshift(item)
+    setTimeout(() => dismissToast(id), 5000)
+  }
+
+  function dismissToast(id: number) {
+    toasts.value = toasts.value.filter(t => t.id !== id)
+  }
+
 
   let connection: HubConnection | null = null
 
@@ -89,6 +114,11 @@ export const useNotificheStore = defineStore('notifiche', () => {
     preferenze.value = prefs
   }
 
+  async function fetchCanali() {
+    canali.value = await $api<{ email: boolean; browser: boolean; teams: boolean }>('/v1/notifiche/canali')
+  }
+
+
   async function fetchImpostazioni() {
     return await $api<ImpostazioniNotificaApi>('/v1/notifiche/impostazioni')
   }
@@ -114,6 +144,9 @@ export const useNotificheStore = defineStore('notifiche', () => {
     connection.on('NuovaNotifica', (notifica: NotificaApi) => {
       notifiche.value.unshift(notifica)
       nonLette.value++
+
+      // Show toast notification
+      addToast(notifica.titolo, notifica.messaggio, notifica.link)
     })
 
     connection.start().catch(err => {
@@ -146,7 +179,11 @@ export const useNotificheStore = defineStore('notifiche', () => {
     nonLette,
     tipiNotifica,
     preferenze,
+    canali,
     loading,
+    toasts,
+    addToast,
+    dismissToast,
     fetchNotifiche,
     fetchContaNonLette,
     segnaComeLetta,
@@ -157,6 +194,7 @@ export const useNotificheStore = defineStore('notifiche', () => {
     fetchTipiNotifica,
     fetchPreferenze,
     salvaPreferenze,
+    fetchCanali,
     fetchImpostazioni,
     salvaImpostazioni,
     startConnection,

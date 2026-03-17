@@ -1,6 +1,5 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
@@ -11,16 +10,15 @@ namespace CoreERP.Infrastructure.Identity;
 public interface IMicrosoftGraphService
 {
     /// <summary>
-    /// Gets a valid Microsoft access token for the user, refreshing if expired.
-    /// Returns null if the user has no Microsoft account linked or refresh fails.
+    /// Creates an HttpClient using an app-only token (client credentials flow).
+    /// Used for application-level Graph API calls (e.g., activity feed with TeamsActivity.Send).
     /// </summary>
-    Task<string?> GetAccessTokenAsync(string userId);
+    Task<HttpClient?> CreateAppGraphClientAsync();
 
     /// <summary>
-    /// Creates an HttpClient with the user's Microsoft access token set in the Authorization header.
-    /// Returns null if no valid token is available.
+    /// Returns the MicrosoftId (Azure AD Object ID) for the given application user.
     /// </summary>
-    Task<HttpClient?> CreateGraphClientAsync(string userId);
+    Task<string?> GetUserMicrosoftIdAsync(string userId);
 }
 
 public class MicrosoftGraphService : IMicrosoftGraphService
@@ -29,6 +27,9 @@ public class MicrosoftGraphService : IMicrosoftGraphService
     private readonly IConfiguration _configuration;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<MicrosoftGraphService> _logger;
+
+    private string? _appAccessToken;
+    private DateTime _appTokenExpiry = DateTime.MinValue;
 
     public MicrosoftGraphService(
         UserManager<ApplicationIdentityUser> userManager,
@@ -42,27 +43,15 @@ public class MicrosoftGraphService : IMicrosoftGraphService
         _logger = logger;
     }
 
-    public async Task<string?> GetAccessTokenAsync(string userId)
+    public async Task<string?> GetUserMicrosoftIdAsync(string userId)
     {
         var user = await _userManager.FindByIdAsync(userId);
-        if (user is null || string.IsNullOrEmpty(user.MicrosoftRefreshToken))
-            return null;
-
-        // Token still valid (with 5 min buffer)
-        if (user.MicrosoftTokenExpiry.HasValue
-            && user.MicrosoftTokenExpiry.Value > DateTime.UtcNow.AddMinutes(5)
-            && !string.IsNullOrEmpty(user.MicrosoftAccessToken))
-        {
-            return user.MicrosoftAccessToken;
-        }
-
-        // Token expired or about to expire, refresh it
-        return await RefreshTokenAsync(user);
+        return user?.MicrosoftId;
     }
 
-    public async Task<HttpClient?> CreateGraphClientAsync(string userId)
+    public async Task<HttpClient?> CreateAppGraphClientAsync()
     {
-        var accessToken = await GetAccessTokenAsync(userId);
+        var accessToken = await GetAppAccessTokenAsync();
         if (accessToken is null)
             return null;
 
@@ -74,15 +63,18 @@ public class MicrosoftGraphService : IMicrosoftGraphService
         return client;
     }
 
-    private async Task<string?> RefreshTokenAsync(ApplicationIdentityUser user)
+    private async Task<string?> GetAppAccessTokenAsync()
     {
+        if (_appAccessToken is not null && _appTokenExpiry > DateTime.UtcNow.AddMinutes(5))
+            return _appAccessToken;
+
         var clientId = _configuration["AzureAd:ClientId"];
         var clientSecret = _configuration["AzureAd:ClientSecret"];
         var tenantId = _configuration["AzureAd:TenantId"];
 
-        if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
+        if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret) || string.IsNullOrEmpty(tenantId))
         {
-            _logger.LogWarning("Azure AD non configurato, impossibile rinnovare token per: {UserId}", user.Id);
+            _logger.LogWarning("Azure AD non configurato, impossibile ottenere app token");
             return null;
         }
 
@@ -95,59 +87,37 @@ public class MicrosoftGraphService : IMicrosoftGraphService
                 {
                     ["client_id"] = clientId,
                     ["client_secret"] = clientSecret,
-                    ["refresh_token"] = user.MicrosoftRefreshToken!,
-                    ["grant_type"] = "refresh_token",
-                    ["scope"] = "openid profile email User.Read offline_access",
+                    ["grant_type"] = "client_credentials",
+                    ["scope"] = "https://graph.microsoft.com/.default",
                 }));
 
             if (!response.IsSuccessStatusCode)
             {
                 var errorBody = await response.Content.ReadAsStringAsync();
-                _logger.LogError("Refresh token Microsoft fallito per {UserId}: {Status} - {Body}",
-                    user.Id, response.StatusCode, errorBody);
-
-                // If refresh token is revoked/expired, clear Microsoft tokens
-                if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
-                {
-                    user.MicrosoftAccessToken = null;
-                    user.MicrosoftRefreshToken = null;
-                    user.MicrosoftTokenExpiry = null;
-                    await _userManager.UpdateAsync(user);
-                    _logger.LogWarning("Token Microsoft invalidati per {UserId}, refresh token scaduto/revocato", user.Id);
-                }
-
+                _logger.LogError("Client credentials token fallito: {Status} - {Body}",
+                    response.StatusCode, errorBody);
                 return null;
             }
 
-            var tokenData = await response.Content.ReadFromJsonAsync<MicrosoftRefreshTokenResponse>();
+            var tokenData = await response.Content.ReadFromJsonAsync<AppTokenResponse>();
+            _appAccessToken = tokenData!.AccessToken;
+            _appTokenExpiry = DateTime.UtcNow.AddSeconds(tokenData.ExpiresIn);
 
-            user.MicrosoftAccessToken = tokenData!.AccessToken;
-            user.MicrosoftTokenExpiry = DateTime.UtcNow.AddSeconds(tokenData.ExpiresIn);
-
-            // Microsoft may return a new refresh token (rotation)
-            if (!string.IsNullOrEmpty(tokenData.RefreshToken))
-                user.MicrosoftRefreshToken = tokenData.RefreshToken;
-
-            await _userManager.UpdateAsync(user);
-
-            _logger.LogInformation("Token Microsoft rinnovato per: {UserId}", user.Id);
-            return user.MicrosoftAccessToken;
+            _logger.LogInformation("App token (client credentials) ottenuto con successo");
+            return _appAccessToken;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Errore durante refresh token Microsoft per: {UserId}", user.Id);
+            _logger.LogError(ex, "Errore durante ottenimento app token (client credentials)");
             return null;
         }
     }
 }
 
-internal class MicrosoftRefreshTokenResponse
+internal class AppTokenResponse
 {
     [JsonPropertyName("access_token")]
     public string? AccessToken { get; set; }
-
-    [JsonPropertyName("refresh_token")]
-    public string? RefreshToken { get; set; }
 
     [JsonPropertyName("expires_in")]
     public int ExpiresIn { get; set; }
