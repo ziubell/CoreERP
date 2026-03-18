@@ -51,22 +51,21 @@ const isValidationEnabled = computed(() => {
   return props.isActiveStepValid !== undefined
 })
 
-watchEffect(() => {
-  // we need to check undefined because if we pass 0 as currentStep it will be falsy
+// Sync internal state from parent prop (one-directional)
+watch(() => props.currentStep, (newVal) => {
   if (
-    props.currentStep !== undefined
-    && props.currentStep < props.items.length
-    && props.currentStep >= 0
-  )
-    currentStep.value = props.currentStep
-
-  emit('update:currentStep', currentStep.value)
-})
+    newVal !== undefined
+    && newVal < props.items.length
+    && newVal >= 0
+  ) {
+    currentStep.value = newVal
+  }
+}, { immediate: true })
 </script>
 
 <template>
   <VSlideGroup
-    v-model="currentStep"
+    :model-value="currentStep"
     class="app-stepper"
     show-arrows
     :direction="props.direction"

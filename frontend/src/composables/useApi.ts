@@ -15,7 +15,9 @@ export const useApi = createFetch({
 
       if (accessToken) {
         options.headers = {
-          ...options.headers,
+          ...(options.headers instanceof Headers
+            ? Object.fromEntries(options.headers.entries())
+            : options.headers as Record<string, string>),
           Authorization: `Bearer ${accessToken}`,
         }
       }

@@ -1,5 +1,6 @@
 using System.Reflection;
 using CoreERP.Domain.Attributes;
+using CoreERP.Domain.Entities.Anagrafica;
 using CoreERP.Domain.Entities.Notifications;
 using CoreERP.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
@@ -96,6 +97,11 @@ public static class DatabaseSeeder
 
         // Auto-discovery: scan assemblies for NotificaModuloAttribute and register notification types
         await SeedTipiNotificaAsync(context, logger);
+
+        // Seed anagrafica lookups
+        await SeedRuoliContattoAsync(context, logger);
+        await SeedMotiviDisattivazioneAsync(context, logger);
+        await SeedMetodiPagamentoAsync(context, logger);
     }
 
     private static async Task SeedTipiNotificaAsync(ApplicationDbContext context, ILogger logger)
@@ -155,5 +161,65 @@ public static class DatabaseSeeder
         }
 
         await context.SaveChangesAsync();
+    }
+
+    private static async Task SeedRuoliContattoAsync(ApplicationDbContext context, ILogger logger)
+    {
+        if (await context.RuoliContatto.AnyAsync())
+            return;
+
+        var ruoli = new[]
+        {
+            new RuoloContatto { Nome = "Referente Principale", Ordine = 1 },
+            new RuoloContatto { Nome = "Fatturazione", Ordine = 2 },
+            new RuoloContatto { Nome = "Tecnico", Ordine = 3 },
+            new RuoloContatto { Nome = "Commerciale", Ordine = 4 },
+            new RuoloContatto { Nome = "Amministrativo", Ordine = 5 },
+            new RuoloContatto { Nome = "Titolare", Ordine = 6 },
+            new RuoloContatto { Nome = "Legale Rappresentante", Ordine = 7 }
+        };
+
+        context.RuoliContatto.AddRange(ruoli);
+        await context.SaveChangesAsync();
+        logger.LogInformation("Seed ruoli contatto: {Count} ruoli creati", ruoli.Length);
+    }
+
+    private static async Task SeedMotiviDisattivazioneAsync(ApplicationDbContext context, ILogger logger)
+    {
+        if (await context.MotiviDisattivazione.AnyAsync())
+            return;
+
+        var motivi = new[]
+        {
+            new MotivoDisattivazione { Nome = "Insolvenza", Ordine = 1 },
+            new MotivoDisattivazione { Nome = "Recesso per trasloco", Ordine = 2 },
+            new MotivoDisattivazione { Nome = "Recesso per insolvenza", Ordine = 3 },
+            new MotivoDisattivazione { Nome = "Cessata attività", Ordine = 4 },
+            new MotivoDisattivazione { Nome = "Recesso volontario", Ordine = 5 },
+            new MotivoDisattivazione { Nome = "Altro", Ordine = 6 }
+        };
+
+        context.MotiviDisattivazione.AddRange(motivi);
+        await context.SaveChangesAsync();
+        logger.LogInformation("Seed motivi disattivazione: {Count} motivi creati", motivi.Length);
+    }
+
+    private static async Task SeedMetodiPagamentoAsync(ApplicationDbContext context, ILogger logger)
+    {
+        if (await context.MetodiPagamento.AnyAsync())
+            return;
+
+        var metodi = new[]
+        {
+            new MetodoPagamento { Nome = "SDD", Codice = "SDD", RichiedeIBAN = true, Ordine = 1 },
+            new MetodoPagamento { Nome = "Bonifico", Codice = "BON", RichiedeIBAN = false, Ordine = 2 },
+            new MetodoPagamento { Nome = "Contanti", Codice = "CON", RichiedeIBAN = false, Ordine = 3 },
+            new MetodoPagamento { Nome = "RiBa", Codice = "RIBA", RichiedeIBAN = true, Ordine = 4 },
+            new MetodoPagamento { Nome = "Carta di credito", Codice = "CC", RichiedeIBAN = false, Ordine = 5 }
+        };
+
+        context.MetodiPagamento.AddRange(metodi);
+        await context.SaveChangesAsync();
+        logger.LogInformation("Seed metodi pagamento: {Count} metodi creati", metodi.Length);
     }
 }

@@ -63,6 +63,15 @@ public static class DependencyInjection
         services.AddScoped<INotificaService, NotificaService>();
         services.AddHostedService<NotificaCleanupService>();
 
+        // Anagrafica Services
+        services.AddScoped<IAnagraficaRepository, AnagraficaRepository>();
+        services.AddScoped<IContattoRepository, ContattoRepository>();
+        services.AddScoped<IRuoloContattoRepository, RuoloContattoRepository>();
+        services.AddScoped<IMotivoDisattivazioneRepository, MotivoDisattivazioneRepository>();
+        services.AddScoped<IMetodoPagamentoRepository, MetodoPagamentoRepository>();
+        services.AddScoped<IStoricoModificaRepository, StoricoModificaRepository>();
+        services.AddScoped<IAnagraficaService, AnagraficaService>();
+
         return services;
     }
 }

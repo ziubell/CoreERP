@@ -117,26 +117,28 @@ function formatRelativeTime(dateStr: string): string {
   <VRow>
     <VCol cols="12">
       <VCard>
-        <VCardTitle class="d-flex align-center justify-space-between pa-4">
-          <span class="text-h5">Notifiche</span>
-          <div class="d-flex gap-2">
-            <VBtn
-              v-if="store.nonLette > 0"
-              variant="tonal"
-              size="small"
-              @click="store.segnaTutteComeLette()"
-            >
-              Segna tutte come lette
-            </VBtn>
-            <VChip
-              v-if="store.nonLette > 0"
-              color="primary"
-              size="small"
-            >
-              {{ store.nonLette }} non lette
-            </VChip>
-          </div>
-        </VCardTitle>
+        <VCardItem>
+          <VCardTitle class="d-flex align-center justify-space-between">
+            <span class="text-h5">Notifiche</span>
+            <div class="d-flex gap-2">
+              <VBtn
+                v-if="store.nonLette > 0"
+                variant="tonal"
+                size="small"
+                @click="store.segnaTutteComeLette()"
+              >
+                Segna tutte come lette
+              </VBtn>
+              <VChip
+                v-if="store.nonLette > 0"
+                color="primary"
+                size="small"
+              >
+                {{ store.nonLette }} non lette
+              </VChip>
+            </div>
+          </VCardTitle>
+        </VCardItem>
 
         <VDivider />
 
