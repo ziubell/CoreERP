@@ -12,9 +12,11 @@ definePage({
     <VRow>
       <VCol cols="12">
         <VCard>
-          <VCardTitle class="text-h5">
-            CoreERP - Dashboard
-          </VCardTitle>
+          <VCardItem>
+            <VCardTitle class="text-h5">
+              CoreERP - Dashboard
+            </VCardTitle>
+          </VCardItem>
           <VCardText>
             <p class="text-body-1">
               Benvenuto nel sistema ERP. I moduli saranno disponibili a breve.
