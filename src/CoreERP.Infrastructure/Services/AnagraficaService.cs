@@ -3,6 +3,8 @@ using CoreERP.Application.Interfaces;
 using CoreERP.Application.Validators;
 using CoreERP.Domain.Entities.Anagrafica;
 using CoreERP.Domain.Enums;
+using CoreERP.Infrastructure.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 
 namespace CoreERP.Infrastructure.Services;
@@ -15,6 +17,7 @@ public class AnagraficaService : IAnagraficaService
     private readonly IMetodoPagamentoRepository _metodoPagamentoRepo;
     private readonly IStoricoModificaRepository _storicoRepo;
     private readonly INotificaService _notificaService;
+    private readonly UserManager<ApplicationIdentityUser> _userManager;
     private readonly ILogger<AnagraficaService> _logger;
 
     // Campi esclusi dall'audit
@@ -51,6 +54,7 @@ public class AnagraficaService : IAnagraficaService
         IMetodoPagamentoRepository metodoPagamentoRepo,
         IStoricoModificaRepository storicoRepo,
         INotificaService notificaService,
+        UserManager<ApplicationIdentityUser> userManager,
         ILogger<AnagraficaService> logger)
     {
         _anagraficaRepo = anagraficaRepo;
@@ -59,6 +63,7 @@ public class AnagraficaService : IAnagraficaService
         _metodoPagamentoRepo = metodoPagamentoRepo;
         _storicoRepo = storicoRepo;
         _notificaService = notificaService;
+        _userManager = userManager;
         _logger = logger;
     }
 
@@ -411,11 +416,28 @@ public class AnagraficaService : IAnagraficaService
         int pagina = 1, int dimensionePagina = 50)
     {
         var items = await _storicoRepo.GetByEntitaAsync(entitaTipo, entitaId, pagina, dimensionePagina);
-        return items.Select(s => new StoricoModificaDto(
-            s.Id, s.EntitaTipo, s.EntitaId, s.Campo,
-            s.ValorePrecedente, s.ValoreNuovo,
-            s.ValorePrecedenteLabel, s.ValoreNuovoLabel,
-            s.DataModifica, s.ModificatoDa, null, s.Note)).ToList();
+
+        var userIds = items.Select(s => s.ModificatoDa).Distinct().ToList();
+        var usersDict = new Dictionary<string, ApplicationIdentityUser>();
+        foreach (var userId in userIds)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user != null)
+                usersDict[userId] = user;
+        }
+
+        return items.Select(s =>
+        {
+            usersDict.TryGetValue(s.ModificatoDa, out var user);
+            return new StoricoModificaDto(
+                s.Id, s.EntitaTipo, s.EntitaId, s.Campo,
+                s.ValorePrecedente, s.ValoreNuovo,
+                s.ValorePrecedenteLabel, s.ValoreNuovoLabel,
+                s.DataModifica, s.ModificatoDa,
+                user?.NomeCompleto,
+                user?.Foto,
+                s.Note);
+        }).ToList();
     }
 
     public async Task RestoreAsync(int anagraficaId, int storicoModificaId, string userId)

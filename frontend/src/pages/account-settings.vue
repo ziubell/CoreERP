@@ -20,40 +20,31 @@ const tabs = [
 </script>
 
 <template>
-  <div>
-    <VTabs
-      v-model="activeTab"
-      class="v-tabs-pill"
-    >
-      <VTab
-        v-for="item in tabs"
-        :key="item.tab"
-        :value="item.tab"
+  <VRow>
+    <!-- Left: Navigation -->
+    <VCol cols="12" md="3">
+      <h6 class="text-h6 mb-4">Impostazioni</h6>
+      <VTabs
+        v-model="activeTab"
+        direction="vertical"
+        class="v-tabs-pill"
       >
-        <VIcon
-          size="20"
-          start
-          :icon="item.icon"
-        />
-        {{ item.title }}
-      </VTab>
-    </VTabs>
+        <VTab
+          v-for="item in tabs"
+          :key="item.tab"
+          :value="item.tab"
+          :prepend-icon="item.icon"
+        >
+          {{ item.title }}
+        </VTab>
+      </VTabs>
+    </VCol>
 
-    <VWindow
-      v-model="activeTab"
-      class="mt-6 disable-tab-transition"
-    >
-      <VWindowItem value="profilo">
-        <AccountSettingsProfile />
-      </VWindowItem>
-
-      <VWindowItem value="sicurezza">
-        <AccountSettingsSecurity />
-      </VWindowItem>
-
-      <VWindowItem value="notifiche">
-        <AccountSettingsNotifications />
-      </VWindowItem>
-    </VWindow>
-  </div>
+    <!-- Right: Content -->
+    <VCol cols="12" md="9">
+      <AccountSettingsProfile v-if="activeTab === 'profilo'" />
+      <AccountSettingsSecurity v-if="activeTab === 'sicurezza'" />
+      <AccountSettingsNotifications v-if="activeTab === 'notifiche'" />
+    </VCol>
+  </VRow>
 </template>

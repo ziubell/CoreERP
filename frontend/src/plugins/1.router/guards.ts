@@ -30,18 +30,18 @@ export const setupGuards = (router: _RouterTyped<RouteNamedMap & { [key: string]
         return undefined
     }
 
+    if (!isLoggedIn) {
+      return {
+        name: 'login',
+        query: {
+          ...to.query,
+          to: to.fullPath !== '/' ? to.path : undefined,
+        },
+      }
+    }
+
     if (!canNavigate(to) && to.matched.length) {
-      /* eslint-disable indent */
-      return isLoggedIn
-        ? { name: 'not-authorized' }
-        : {
-            name: 'login',
-            query: {
-              ...to.query,
-              to: to.fullPath !== '/' ? to.path : undefined,
-            },
-          }
-      /* eslint-enable indent */
+      return { name: 'not-authorized' }
     }
   })
 }

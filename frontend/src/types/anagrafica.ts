@@ -123,6 +123,7 @@ export interface StoricoModificaApi {
   dataModifica: string
   modificatoDa: string
   modificatoDaNome: string | null
+  modificatoDaAvatar: string | null
   note: string | null
 }
 

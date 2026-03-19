@@ -6,12 +6,10 @@ export default [
       {
         title: 'Anagrafiche',
         to: 'anagrafiche',
-        icon: { icon: 'tabler-building' },
       },
       {
         title: 'Contatti',
         to: 'contatti',
-        icon: { icon: 'tabler-users' },
       },
     ],
   },

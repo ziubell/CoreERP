@@ -12,6 +12,7 @@ public record StoricoModificaDto(
     DateTime DataModifica,
     string ModificatoDa,
     string? ModificatoDaNome,
+    string? ModificatoDaAvatar,
     string? Note);
 
 public record RestoreRequest(int StoricoModificaId);

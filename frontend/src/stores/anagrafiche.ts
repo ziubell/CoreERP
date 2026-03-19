@@ -94,8 +94,8 @@ export const useAnagraficheStore = defineStore('anagrafiche', () => {
     return result as AnagraficaApi
   }
 
-  async function fetchStorico(id: number, pagina = 1) {
-    const data = await $api(`/v1/anagrafiche/${id}/storico?pagina=${pagina}`)
+  async function fetchStorico(id: number, pagina = 1, dimensionePagina = 20) {
+    const data = await $api(`/v1/anagrafiche/${id}/storico?pagina=${pagina}&dimensionePagina=${dimensionePagina}`)
     storico.value = data
   }
 

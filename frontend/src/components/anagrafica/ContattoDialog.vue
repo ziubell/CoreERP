@@ -3,6 +3,7 @@ import { $api } from '@/utils/api'
 import { useAnagraficheStore } from '@/stores/anagrafiche'
 import type { ContattoListItemApi, RuoloContattoApi } from '@/types/anagrafica'
 import { requiredValidator } from '@/@core/utils/validators'
+import { formatNome, formatCognome } from '@/utils/formatters'
 
 export interface ContattoDialogData {
   id?: number | null
@@ -27,7 +28,11 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
   'save': [data: ContattoDialogData]
+  'remove': [contattoId: number]
+  'delete': [contattoId: number]
 }>()
+
+const router = useRouter()
 
 const isOpen = computed({
   get: () => props.modelValue,
@@ -145,6 +150,9 @@ async function handleSave() {
   const { valid } = await formRef.value?.validate()
   if (!valid) return
 
+  if (form.value.nome) form.value.nome = formatNome(form.value.nome)
+  if (form.value.cognome) form.value.cognome = formatCognome(form.value.cognome)
+
   emit('save', { ...form.value })
   isOpen.value = false
 }
@@ -215,7 +223,8 @@ const dialogTitle = computed(() => {
                   v-model="form.nome"
                   label="Nome"
                   :rules="[requiredValidator]"
-                  :readonly="form.isExisting"
+                  :readonly="form.isExisting && !isEditMode"
+                  @blur="form.nome = formatNome(form.nome)"
                 />
               </VCol>
               <VCol cols="12" md="6">
@@ -223,28 +232,22 @@ const dialogTitle = computed(() => {
                   v-model="form.cognome"
                   label="Cognome"
                   :rules="[requiredValidator]"
-                  :readonly="form.isExisting"
+                  :readonly="form.isExisting && !isEditMode"
+                  @blur="form.cognome = formatCognome(form.cognome)"
                 />
               </VCol>
               <VCol cols="12" md="6">
                 <AppTextField
                   v-model="form.email"
                   label="Email"
-                  :readonly="form.isExisting"
+                  :readonly="form.isExisting && !isEditMode"
                 />
               </VCol>
               <VCol cols="12" md="6">
                 <AppTextField
                   v-model="form.cellulare"
                   label="Cellulare"
-                  :readonly="form.isExisting"
-                />
-              </VCol>
-              <VCol cols="12" md="6">
-                <AppTextField
-                  v-model="form.telefono"
-                  label="Telefono"
-                  :readonly="form.isExisting"
+                  :readonly="form.isExisting && !isEditMode"
                 />
               </VCol>
               <VCol v-if="!form.isExisting" cols="12">
@@ -253,10 +256,6 @@ const dialogTitle = computed(() => {
                   label="Note"
                   rows="2"
                 />
-              </VCol>
-
-              <VCol cols="12">
-                <VDivider class="mb-4" />
               </VCol>
 
               <VCol cols="12" md="8">
@@ -280,19 +279,55 @@ const dialogTitle = computed(() => {
         </VForm>
       </VCardText>
 
-      <VCardActions>
-        <VSpacer />
-        <VBtn variant="text" @click="isOpen = false">
-          Annulla
-        </VBtn>
-        <VBtn
-          v-if="showCreateForm"
-          color="primary"
-          @click="handleSave"
-        >
-          {{ isEditMode ? 'Salva' : 'Aggiungi' }}
-        </VBtn>
-      </VCardActions>
+      <VCardText class="d-flex justify-space-between">
+        <!-- Sinistra: Azioni (solo in modifica) -->
+        <div>
+          <VBtn
+            v-if="isEditMode"
+            variant="tonal"
+            color="secondary"
+            append-icon="tabler-chevron-down"
+          >
+            Azioni
+            <VMenu activator="parent">
+              <VList>
+                <VListItem
+                  prepend-icon="tabler-external-link"
+                  title="Apri scheda contatto"
+                  @click="router.push(`/contatti/${form.contattoId || form.id}`); isOpen = false"
+                />
+                <VListItem
+                  prepend-icon="tabler-unlink"
+                  title="Rimuovi dall'anagrafica"
+                  @click="emit('remove', form.contattoId || form.id!); isOpen = false"
+                />
+                <VDivider />
+                <VListItem
+                  prepend-icon="tabler-trash"
+                  title="Elimina contatto"
+                  class="text-error"
+                  @click="emit('delete', form.contattoId || form.id!); isOpen = false"
+                />
+              </VList>
+            </VMenu>
+          </VBtn>
+        </div>
+
+        <!-- Destra: Annulla + Salva -->
+        <div class="d-flex gap-4">
+          <VBtn variant="tonal" color="secondary" @click="isOpen = false">
+            Annulla
+          </VBtn>
+          <VBtn
+            v-if="showCreateForm"
+            color="primary"
+            prepend-icon="tabler-device-floppy"
+            @click="handleSave"
+          >
+            Salva
+          </VBtn>
+        </div>
+      </VCardText>
     </VCard>
   </VDialog>
 </template>

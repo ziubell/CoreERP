@@ -215,18 +215,13 @@ const showSnackbar = (message: string, color: string) => {
                 <div class="d-flex gap-4">
                   <VBtn
                     type="submit"
+                    color="primary"
+                    prepend-icon="tabler-device-floppy"
                     :loading="isLoading"
                   >
-                    Aggiorna password
+                    Salva
                   </VBtn>
 
-                  <VBtn
-                    variant="tonal"
-                    color="secondary"
-                    @click="resetForm"
-                  >
-                    Annulla
-                  </VBtn>
                 </div>
               </VCol>
             </VRow>
@@ -347,22 +342,14 @@ const showSnackbar = (message: string, color: string) => {
         <br><br>
         Non potrai più accedere tramite Microsoft 365 finché non lo collegherai di nuovo.
       </VCardText>
-      <VCardActions class="pa-6 pt-0">
-        <VSpacer />
-        <VBtn
-          variant="tonal"
-          color="secondary"
-          @click="showUnlinkDialog = false"
-        >
+      <VCardText class="d-flex justify-end gap-4">
+        <VBtn variant="tonal" color="secondary" @click="showUnlinkDialog = false">
           Annulla
         </VBtn>
-        <VBtn
-          color="error"
-          @click="unlinkMicrosoft"
-        >
+        <VBtn color="error" @click="unlinkMicrosoft">
           Scollega
         </VBtn>
-      </VCardActions>
+      </VCardText>
     </VCard>
   </VDialog>
 

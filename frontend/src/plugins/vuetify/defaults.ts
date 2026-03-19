@@ -21,6 +21,7 @@ export default {
   VBtn: {
     // set v-btn default color to primary
     color: 'primary',
+    rounded: true,
   },
   VChip: {
     label: true,

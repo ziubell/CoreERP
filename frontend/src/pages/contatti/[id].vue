@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { useContattiStore } from '@/stores/contatti'
+import { useNotificheStore } from '@/stores/notifiche'
 
 const route = useRoute()
 const router = useRouter()
 const store = useContattiStore()
+const notificheStore = useNotificheStore()
 
 const id = computed(() => Number(route.params.id))
 const contatto = computed(() => store.current)
@@ -11,11 +13,6 @@ const contatto = computed(() => store.current)
 // Delete dialog
 const deleteDialogOpen = ref(false)
 const deleteLoading = ref(false)
-
-// Snackbar
-const snackbar = ref(false)
-const snackbarMessage = ref('')
-const snackbarColor = ref('success')
 
 onMounted(async () => {
   await store.fetchById(id.value)
@@ -28,9 +25,7 @@ async function confirmDelete() {
     router.push('/contatti')
   }
   catch (error: any) {
-    snackbarMessage.value = error?.data?.message || error?.message || 'Errore durante l\'eliminazione'
-    snackbarColor.value = 'error'
-    snackbar.value = true
+    notificheStore.addToast('Errore durante l\'eliminazione', error?.data?.message || error?.message || null, null, 'error')
     deleteDialogOpen.value = false
   }
   finally {
@@ -51,57 +46,62 @@ async function confirmDelete() {
       <div class="d-flex gap-2">
         <VBtn
           color="primary"
-          variant="tonal"
           prepend-icon="tabler-edit"
           :to="`/contatti/modifica-${id}`"
         >
           Modifica
         </VBtn>
-        <VBtn color="error" variant="tonal" icon="tabler-trash" @click="deleteDialogOpen = true" />
+
+        <VBtn variant="tonal" color="secondary" append-icon="tabler-chevron-down">
+          Azioni
+          <VMenu activator="parent">
+            <VList>
+              <VListItem
+                prepend-icon="tabler-trash"
+                title="Elimina"
+                class="text-error"
+                @click="deleteDialogOpen = true"
+              />
+            </VList>
+          </VMenu>
+        </VBtn>
       </div>
     </div>
 
     <VRow>
       <!-- Info contatto -->
       <VCol cols="12" md="4">
-        <VCard title="Informazioni">
+        <VCard title="Dettagli">
           <VCardText>
             <div class="d-flex flex-column gap-3">
-              <div>
-                <span class="text-caption text-disabled">Nome completo</span>
-                <p class="text-body-1 mb-0 font-weight-medium">{{ contatto.nome }} {{ contatto.cognome }}</p>
-              </div>
-              <div v-if="contatto.email">
-                <span class="text-caption text-disabled">Email</span>
-                <p class="text-body-1 mb-0">
-                  <VIcon icon="tabler-mail" size="16" class="me-1" />{{ contatto.email }}
-                </p>
-              </div>
-              <div v-if="contatto.cellulare">
-                <span class="text-caption text-disabled">Cellulare</span>
-                <p class="text-body-1 mb-0">
-                  <VIcon icon="tabler-phone" size="16" class="me-1" />{{ contatto.cellulare }}
-                </p>
-              </div>
-              <div v-if="contatto.telefono">
-                <span class="text-caption text-disabled">Telefono</span>
-                <p class="text-body-1 mb-0">
-                  <VIcon icon="tabler-phone-call" size="16" class="me-1" />{{ contatto.telefono }}
-                </p>
-              </div>
-              <div v-if="contatto.note">
-                <span class="text-caption text-disabled">Note</span>
-                <p class="text-body-2 mb-0">{{ contatto.note }}</p>
-              </div>
-              <VDivider />
-              <div class="d-flex justify-space-between">
-                <span class="text-caption text-disabled">Creato</span>
-                <span class="text-body-2">{{ new Date(contatto.dataCreazione).toLocaleDateString('it-IT') }}</span>
-              </div>
-              <div v-if="contatto.dataModifica" class="d-flex justify-space-between">
-                <span class="text-caption text-disabled">Modificato</span>
-                <span class="text-body-2">{{ new Date(contatto.dataModifica).toLocaleDateString('it-IT') }}</span>
-              </div>
+              <h6 class="text-h6">
+                Nome completo:
+                <span class="text-body-1 d-inline-block">{{ contatto.nome }} {{ contatto.cognome }}</span>
+              </h6>
+              <h6 v-if="contatto.email" class="text-h6">
+                Email:
+                <span class="text-body-1 d-inline-block">{{ contatto.email }}</span>
+              </h6>
+              <h6 v-if="contatto.cellulare" class="text-h6">
+                Cellulare:
+                <span class="text-body-1 d-inline-block">{{ contatto.cellulare }}</span>
+              </h6>
+              <h6 v-if="contatto.telefono" class="text-h6">
+                Telefono:
+                <span class="text-body-1 d-inline-block">{{ contatto.telefono }}</span>
+              </h6>
+              <h6 v-if="contatto.note" class="text-h6">
+                Note:
+                <span class="text-body-1 d-inline-block">{{ contatto.note }}</span>
+              </h6>
+              <h6 class="text-h6">
+                Creato:
+                <span class="text-body-1 d-inline-block">{{ new Date(contatto.dataCreazione).toLocaleDateString('it-IT') }}</span>
+              </h6>
+              <h6 v-if="contatto.dataModifica" class="text-h6">
+                Modificato:
+                <span class="text-body-1 d-inline-block">{{ new Date(contatto.dataModifica).toLocaleDateString('it-IT') }}</span>
+              </h6>
             </div>
           </VCardText>
         </VCard>
@@ -112,39 +112,38 @@ async function confirmDelete() {
         <VCard>
           <VCardItem>
             <VCardTitle class="d-flex align-center">
-              <VIcon icon="tabler-building" size="20" class="me-2" />
               Anagrafiche collegate
               <VSpacer />
               <VChip size="x-small" label>{{ contatto.anagrafiche?.length ?? 0 }}</VChip>
             </VCardTitle>
           </VCardItem>
 
-          <VCardText>
-            <VTable v-if="contatto.anagrafiche && contatto.anagrafiche.length > 0">
-              <thead>
-                <tr>
-                  <th>Denominazione</th>
-                  <th>Ruolo</th>
-                  <th>Principale</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="a in contatto.anagrafiche" :key="a.anagraficaId">
-                  <td>
-                    <RouterLink :to="`/anagrafiche/${a.anagraficaId}`" class="font-weight-medium">
-                      {{ a.denominazione }}
-                    </RouterLink>
-                  </td>
-                  <td>
-                    <VChip size="small" label>{{ a.ruoloContattoNome }}</VChip>
-                  </td>
-                  <td>
-                    <VIcon v-if="a.principale" icon="tabler-star-filled" color="warning" size="18" />
-                  </td>
-                </tr>
-              </tbody>
-            </VTable>
-            <div v-else class="text-center text-disabled py-6">
+          <VTable v-if="contatto.anagrafiche && contatto.anagrafiche.length > 0">
+            <thead>
+              <tr>
+                <th>Denominazione</th>
+                <th>Ruolo</th>
+                <th>Principale</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="a in contatto.anagrafiche" :key="a.anagraficaId">
+                <td>
+                  <RouterLink :to="`/anagrafiche/${a.anagraficaId}`" class="font-weight-medium">
+                    {{ a.denominazione }}
+                  </RouterLink>
+                </td>
+                <td>
+                  <VChip size="small" label>{{ a.ruoloContattoNome }}</VChip>
+                </td>
+                <td>
+                  <VIcon v-if="a.principale" icon="tabler-star-filled" color="warning" size="18" />
+                </td>
+              </tr>
+            </tbody>
+          </VTable>
+          <VCardText v-else>
+            <div class="text-center text-disabled py-6">
               Nessuna anagrafica collegata
             </div>
           </VCardText>
@@ -163,28 +162,20 @@ async function confirmDelete() {
       <VCardText>
         Sei sicuro di voler eliminare questo contatto? L'operazione non può essere annullata.
       </VCardText>
-      <VCardActions>
-        <VSpacer />
-        <VBtn variant="text" @click="deleteDialogOpen = false">
+      <VCardText class="d-flex justify-end gap-4">
+        <VBtn variant="tonal" color="secondary" @click="deleteDialogOpen = false">
           Annulla
         </VBtn>
         <VBtn
           color="error"
+          prepend-icon="tabler-trash"
           :loading="deleteLoading"
           @click="confirmDelete"
         >
           Elimina
         </VBtn>
-      </VCardActions>
+      </VCardText>
     </VCard>
   </VDialog>
 
-  <!-- Snackbar -->
-  <VSnackbar
-    v-model="snackbar"
-    :color="snackbarColor"
-    :timeout="5000"
-  >
-    {{ snackbarMessage }}
-  </VSnackbar>
 </template>

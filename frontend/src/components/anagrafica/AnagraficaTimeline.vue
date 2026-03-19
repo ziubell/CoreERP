@@ -8,16 +8,35 @@ const props = defineProps<{
 
 const store = useAnagraficheStore()
 const loading = ref(false)
+const loadingMore = ref(false)
 const storico = ref<StoricoModificaApi[]>([])
+const pagina = ref(1)
+const hasMore = ref(true)
+const dimensionePagina = 20
 
 async function loadStorico() {
   loading.value = true
+  pagina.value = 1
   try {
-    await store.fetchStorico(props.anagraficaId)
+    await store.fetchStorico(props.anagraficaId, 1, dimensionePagina)
     storico.value = store.storico
+    hasMore.value = store.storico.length >= dimensionePagina
   }
   finally {
     loading.value = false
+  }
+}
+
+async function loadMore() {
+  loadingMore.value = true
+  pagina.value++
+  try {
+    await store.fetchStorico(props.anagraficaId, pagina.value, dimensionePagina)
+    storico.value.push(...store.storico)
+    hasMore.value = store.storico.length >= dimensionePagina
+  }
+  finally {
+    loadingMore.value = false
   }
 }
 
@@ -39,24 +58,19 @@ function getColor(entry: StoricoModificaApi): string {
   return 'primary'
 }
 
-function getIcon(entry: StoricoModificaApi): string {
-  if (entry.note?.includes('Conversione')) return 'tabler-transform'
-  if (entry.note?.includes('Disattivazione')) return 'tabler-ban'
-  if (entry.note?.includes('Riattivazione')) return 'tabler-check'
-  if (entry.note?.includes('Ripristinato')) return 'tabler-arrow-back-up'
-  if (entry.campo === 'Attivo') return 'tabler-toggle-right'
-  if (entry.campo === 'Tipo') return 'tabler-transform'
-  if (entry.campo.includes('Pagamento') || entry.campo === 'IBAN') return 'tabler-credit-card'
-  if (entry.campo.includes('Partita') || entry.campo.includes('Codice')) return 'tabler-receipt-tax'
-  return 'tabler-edit'
-}
-
-function getTitle(entry: StoricoModificaApi): string {
-  if (entry.note?.includes('Conversione')) return 'Conversione a Cliente'
+function getBadgeLabel(entry: StoricoModificaApi): string {
+  if (entry.note?.includes('Conversione')) return 'Conversione'
   if (entry.note?.includes('Disattivazione')) return 'Disattivazione'
   if (entry.note?.includes('Riattivazione')) return 'Riattivazione'
-  if (entry.note?.includes('Ripristinato')) return `Ripristino campo ${entry.campo}`
-  return `Modifica ${entry.campo}`
+  if (entry.note?.includes('Ripristinato')) return 'Ripristino'
+  return 'Modifica'
+}
+
+function getInitials(name: string | null): string {
+  if (!name) return '?'
+  const parts = name.trim().split(' ')
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
+  return name[0].toUpperCase()
 }
 
 function formatTimeAgo(dateStr: string): string {
@@ -93,53 +107,72 @@ onMounted(loadStorico)
         <p>Nessuna attività registrata</p>
       </div>
 
-      <VTimeline
-        v-else
-        density="compact"
-        side="end"
-        truncate-line="both"
-      >
-        <VTimelineItem
-          v-for="entry in storico"
-          :key="entry.id"
-          :dot-color="getColor(entry)"
-          size="x-small"
+      <template v-else>
+        <VTimeline
+          density="compact"
+          side="end"
+          truncate-line="both"
         >
-          <div class="d-flex justify-space-between align-center flex-wrap mb-2">
-            <span class="app-timeline-title">
-              <VIcon :icon="getIcon(entry)" size="16" class="me-1" />
-              {{ getTitle(entry) }}
-            </span>
-            <span class="app-timeline-meta">{{ formatTimeAgo(entry.dataModifica) }}</span>
-          </div>
+          <VTimelineItem
+            v-for="entry in storico"
+            :key="entry.id"
+            :dot-color="getColor(entry)"
+            size="x-small"
+          >
+            <div class="d-flex align-center flex-wrap gap-2">
+              <!-- Gruppo 1: Avatar + Nome + Data -->
+              <div class="d-flex align-center gap-2">
+                <VAvatar size="24" color="primary" variant="tonal">
+                  <VImg v-if="entry.modificatoDaAvatar" :src="entry.modificatoDaAvatar" />
+                  <span v-else class="text-caption">{{ getInitials(entry.modificatoDaNome) }}</span>
+                </VAvatar>
+                <span class="text-body-2 font-weight-medium">{{ entry.modificatoDaNome ?? entry.modificatoDa }}</span>
+                <span class="text-body-2 text-disabled">·</span>
+                <span class="text-body-2 text-disabled">{{ formatTimeAgo(entry.dataModifica) }}</span>
+              </div>
 
-          <p class="app-timeline-text mb-1">
-            <span v-if="entry.valorePrecedenteLabel || entry.valorePrecedente" class="text-decoration-line-through">
-              {{ entry.valorePrecedenteLabel ?? entry.valorePrecedente ?? '(vuoto)' }}
-            </span>
-            <VIcon v-if="entry.valorePrecedente || entry.valoreNuovo" icon="tabler-arrow-right" size="14" class="mx-1" />
-            <span class="font-weight-medium">
-              {{ entry.valoreNuovoLabel ?? entry.valoreNuovo ?? '(vuoto)' }}
-            </span>
-          </p>
+              <!-- Gruppo 2: Badge + Campo: vecchio → nuovo -->
+              <div class="d-flex align-center gap-2">
+                <VChip :color="getColor(entry)" size="x-small" label>
+                  {{ getBadgeLabel(entry) }}
+                </VChip>
+                <span class="text-body-2">
+                  <span class="font-weight-medium">{{ entry.campo }}:</span>
+                  <template v-if="entry.valorePrecedente || entry.valoreNuovo">
+                    <span class="text-disabled text-decoration-line-through">{{ entry.valorePrecedenteLabel ?? entry.valorePrecedente ?? '(vuoto)' }}</span>
+                    <VIcon icon="tabler-arrow-right" size="14" class="mx-1" />
+                    <span>{{ entry.valoreNuovoLabel ?? entry.valoreNuovo ?? '(vuoto)' }}</span>
+                  </template>
+                </span>
+              </div>
 
-          <div class="d-flex align-center justify-space-between">
-            <span class="app-timeline-meta">
-              <VIcon icon="tabler-user" size="12" class="me-1" />
-              {{ entry.modificatoDaNome ?? entry.modificatoDa }}
-            </span>
-            <VBtn
-              v-if="!entry.note?.includes('Ripristinato')"
-              size="x-small"
-              variant="text"
-              color="warning"
-              @click="handleRestore(entry.id)"
-            >
-              Ripristina
-            </VBtn>
-          </div>
-        </VTimelineItem>
-      </VTimeline>
+              <VSpacer />
+
+              <VBtn
+                v-if="!entry.note?.includes('Ripristinato')"
+                size="x-small"
+                variant="text"
+                color="warning"
+                @click="handleRestore(entry.id)"
+              >
+                Ripristina
+              </VBtn>
+            </div>
+          </VTimelineItem>
+        </VTimeline>
+
+        <!-- Carica altri -->
+        <div v-if="hasMore" class="text-center mt-4">
+          <VBtn
+            variant="tonal"
+            color="secondary"
+            :loading="loadingMore"
+            @click="loadMore"
+          >
+            Carica altri
+          </VBtn>
+        </div>
+      </template>
     </VCardText>
   </VCard>
 </template>

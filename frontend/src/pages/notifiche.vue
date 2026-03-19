@@ -343,22 +343,18 @@ function formatRelativeTime(dateStr: string): string {
       <VCardText>
         Sei sicuro di voler eliminare tutte le notifiche? Questa azione non può essere annullata.
       </VCardText>
-      <VCardActions>
-        <VSpacer />
-        <VBtn
-          variant="text"
-          @click="dialogResetVisible = false"
-        >
+      <VCardText class="d-flex justify-end gap-4">
+        <VBtn variant="tonal" color="secondary" @click="dialogResetVisible = false">
           Annulla
         </VBtn>
         <VBtn
           color="error"
-          variant="elevated"
+          prepend-icon="tabler-trash"
           @click="resetNotifiche"
         >
-          Cancella tutte
+          Elimina
         </VBtn>
-      </VCardActions>
+      </VCardText>
     </VCard>
   </VDialog>
 </template>

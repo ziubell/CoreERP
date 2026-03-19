@@ -170,7 +170,7 @@ public static class DatabaseSeeder
 
         var ruoli = new[]
         {
-            new RuoloContatto { Nome = "Referente Principale", Ordine = 1 },
+            new RuoloContatto { Nome = "Referente", Ordine = 1 },
             new RuoloContatto { Nome = "Fatturazione", Ordine = 2 },
             new RuoloContatto { Nome = "Tecnico", Ordine = 3 },
             new RuoloContatto { Nome = "Commerciale", Ordine = 4 },

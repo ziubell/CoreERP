@@ -176,47 +176,50 @@ const fullAddress = computed(() => {
       <div class="d-flex gap-2">
         <VBtn
           color="primary"
-          variant="tonal"
           prepend-icon="tabler-edit"
           :to="`/anagrafiche/modifica-${id}`"
         >
           Modifica
         </VBtn>
+
         <VBtn
-          v-if="anagrafica.tipo === 0"
-          color="primary"
           variant="tonal"
-          prepend-icon="tabler-transform"
-          :loading="convertiLoading"
-          @click="handleConverti"
+          color="secondary"
+          append-icon="tabler-chevron-down"
         >
-          Converti a Cliente
+          Azioni
+          <VMenu activator="parent">
+            <VList>
+              <VListItem
+                v-if="anagrafica.tipo === 0"
+                prepend-icon="tabler-transform"
+                title="Converti a Cliente"
+                :disabled="convertiLoading"
+                @click="handleConverti"
+              />
+              <VListItem
+                v-if="anagrafica.attivo && anagrafica.tipo === 1"
+                prepend-icon="tabler-ban"
+                title="Disattiva"
+                @click="handleDisattiva"
+              />
+              <VListItem
+                v-if="!anagrafica.attivo"
+                prepend-icon="tabler-check"
+                title="Riattiva"
+                :disabled="riattivaLoading"
+                @click="handleRiattiva"
+              />
+              <VDivider />
+              <VListItem
+                prepend-icon="tabler-trash"
+                title="Elimina"
+                class="text-error"
+                @click="deleteDialogOpen = true"
+              />
+            </VList>
+          </VMenu>
         </VBtn>
-        <VBtn
-          v-if="anagrafica.attivo && anagrafica.tipo === 1"
-          color="warning"
-          variant="tonal"
-          prepend-icon="tabler-ban"
-          @click="handleDisattiva"
-        >
-          Disattiva
-        </VBtn>
-        <VBtn
-          v-if="!anagrafica.attivo"
-          color="success"
-          variant="tonal"
-          prepend-icon="tabler-check"
-          :loading="riattivaLoading"
-          @click="handleRiattiva"
-        >
-          Riattiva
-        </VBtn>
-        <VBtn
-          color="error"
-          variant="tonal"
-          icon="tabler-trash"
-          @click="deleteDialogOpen = true"
-        />
       </div>
     </div>
 
@@ -227,15 +230,6 @@ const fullAddress = computed(() => {
         <!-- Customer Details Card -->
         <VCard>
           <VCardText class="text-center pt-6">
-            <VChip
-              :color="anagrafica.tipo === 1 ? 'primary' : 'secondary'"
-              size="small"
-              label
-              class="mb-4"
-            >
-              {{ TIPO_ANAGRAFICA_LABELS[anagrafica.tipo] }}
-            </VChip>
-
             <!-- Score Icons -->
             <div class="d-flex justify-center gap-6 mb-2">
               <!-- Score -->
@@ -269,108 +263,100 @@ const fullAddress = computed(() => {
             <VCardTitle>Dettagli</VCardTitle>
           </VCardItem>
           <VCardText>
-            <ul class="list-unstyled mb-6">
-              <li class="mb-2">
-                <span class="h6 me-1">Tipo Soggetto:</span>
-                <span>{{ TIPO_SOGGETTO_LABELS[anagrafica.tipoSoggetto] }}</span>
-              </li>
-              <li v-if="anagrafica.codiceCliente" class="mb-2">
-                <span class="h6 me-1">Codice Cliente:</span>
-                <span>{{ anagrafica.codiceCliente }}</span>
-              </li>
-              <li v-if="anagrafica.telefono" class="mb-2">
-                <span class="h6 me-1">Telefono:</span>
-                <span>{{ anagrafica.telefono }}</span>
-              </li>
-              <li v-if="anagrafica.pec" class="mb-2">
-                <span class="h6 me-1">PEC:</span>
-                <span>{{ anagrafica.pec }}</span>
-              </li>
-              <li v-if="anagrafica.sitoWeb" class="mb-2">
-                <span class="h6 me-1">Sito Web:</span>
-                <a :href="anagrafica.sitoWeb" target="_blank">{{ anagrafica.sitoWeb }}</a>
-              </li>
-              <li v-if="anagrafica.partitaIva" class="mb-2">
-                <span class="h6 me-1">P.IVA:</span>
-                <span>{{ anagrafica.partitaIva }}</span>
-              </li>
-              <li v-if="anagrafica.codiceFiscale" class="mb-2">
-                <span class="h6 me-1">Codice Fiscale:</span>
-                <span>{{ anagrafica.codiceFiscale }}</span>
-              </li>
-              <li v-if="anagrafica.codiceSDI" class="mb-2">
-                <span class="h6 me-1">Codice SDI:</span>
-                <span>{{ anagrafica.codiceSDI }}</span>
-              </li>
-              <li v-if="fullAddress" class="mb-2">
-                <span class="h6 me-1">Indirizzo:</span>
-                <span>{{ fullAddress }}</span>
-              </li>
-              <li v-if="anagrafica.metodoPagamentoNome" class="mb-2">
-                <span class="h6 me-1">Metodo Pagamento:</span>
-                <span>{{ anagrafica.metodoPagamentoNome }}</span>
-              </li>
-              <li v-if="anagrafica.iban" class="mb-2">
-                <span class="h6 me-1">IBAN:</span>
-                <span>{{ anagrafica.iban }}</span>
-              </li>
-              <li v-if="anagrafica.periodicitaPagamento" class="mb-2">
-                <span class="h6 me-1">Periodicità:</span>
-                <span>{{ PERIODICITA_LABELS[anagrafica.periodicitaPagamento as PeriodicitaPagamento] }}</span>
-              </li>
-              <li v-if="anagrafica.dataConversione" class="mb-2">
-                <span class="h6 me-1">Data Conversione:</span>
-                <span>{{ new Date(anagrafica.dataConversione).toLocaleDateString('it-IT') }}</span>
-              </li>
-              <li class="mb-2">
-                <span class="h6 me-1">Creato il:</span>
-                <span>{{ new Date(anagrafica.dataCreazione).toLocaleDateString('it-IT') }}</span>
-              </li>
-              <li v-if="anagrafica.dataModifica" class="mb-2">
-                <span class="h6 me-1">Modificato il:</span>
-                <span>{{ new Date(anagrafica.dataModifica).toLocaleDateString('it-IT') }}</span>
-              </li>
-              <li v-if="!anagrafica.attivo && anagrafica.motivoDisattivazioneNome" class="mb-2">
-                <span class="h6 me-1">Motivo Disattivazione:</span>
+            <div class="d-flex flex-column gap-3">
+              <h6 class="text-h6">
+                Tipo Soggetto:
+                <span class="text-body-1 d-inline-block">{{ TIPO_SOGGETTO_LABELS[anagrafica.tipoSoggetto] }}</span>
+              </h6>
+              <h6 v-if="anagrafica.codiceCliente" class="text-h6">
+                Codice Cliente:
+                <span class="text-body-1 d-inline-block">{{ anagrafica.codiceCliente }}</span>
+              </h6>
+              <h6 v-if="anagrafica.telefono" class="text-h6">
+                Telefono:
+                <span class="text-body-1 d-inline-block">{{ anagrafica.telefono }}</span>
+              </h6>
+              <h6 v-if="anagrafica.pec" class="text-h6">
+                PEC:
+                <span class="text-body-1 d-inline-block">{{ anagrafica.pec }}</span>
+              </h6>
+              <h6 v-if="anagrafica.sitoWeb" class="text-h6">
+                Sito Web:
+                <a :href="anagrafica.sitoWeb" target="_blank" class="text-body-1 d-inline-block">{{ anagrafica.sitoWeb }}</a>
+              </h6>
+              <h6 v-if="anagrafica.partitaIva" class="text-h6">
+                P.IVA:
+                <span class="text-body-1 d-inline-block">{{ anagrafica.partitaIva }}</span>
+              </h6>
+              <h6 v-if="anagrafica.codiceFiscale" class="text-h6">
+                Codice Fiscale:
+                <span class="text-body-1 d-inline-block">{{ anagrafica.codiceFiscale }}</span>
+              </h6>
+              <h6 v-if="anagrafica.codiceSDI" class="text-h6">
+                Codice SDI:
+                <span class="text-body-1 d-inline-block">{{ anagrafica.codiceSDI }}</span>
+              </h6>
+              <h6 v-if="fullAddress" class="text-h6">
+                Indirizzo:
+                <span class="text-body-1 d-inline-block">{{ fullAddress }}</span>
+              </h6>
+              <h6 v-if="anagrafica.metodoPagamentoNome" class="text-h6">
+                Metodo Pagamento:
+                <span class="text-body-1 d-inline-block">{{ anagrafica.metodoPagamentoNome }}</span>
+              </h6>
+              <h6 v-if="anagrafica.iban" class="text-h6">
+                IBAN:
+                <span class="text-body-1 d-inline-block">{{ anagrafica.iban }}</span>
+              </h6>
+              <h6 v-if="anagrafica.periodicitaPagamento" class="text-h6">
+                Periodicità:
+                <span class="text-body-1 d-inline-block">{{ PERIODICITA_LABELS[anagrafica.periodicitaPagamento as PeriodicitaPagamento] }}</span>
+              </h6>
+              <h6 v-if="anagrafica.dataConversione" class="text-h6">
+                Data Conversione:
+                <span class="text-body-1 d-inline-block">{{ new Date(anagrafica.dataConversione).toLocaleDateString('it-IT') }}</span>
+              </h6>
+              <h6 class="text-h6">
+                Creato il:
+                <span class="text-body-1 d-inline-block">{{ new Date(anagrafica.dataCreazione).toLocaleDateString('it-IT') }}</span>
+              </h6>
+              <h6 v-if="anagrafica.dataModifica" class="text-h6">
+                Modificato il:
+                <span class="text-body-1 d-inline-block">{{ new Date(anagrafica.dataModifica).toLocaleDateString('it-IT') }}</span>
+              </h6>
+              <h6 v-if="!anagrafica.attivo && anagrafica.motivoDisattivazioneNome" class="text-h6">
+                Motivo Disattivazione:
                 <VChip size="x-small" color="error" label>{{ anagrafica.motivoDisattivazioneNome }}</VChip>
-              </li>
-              <li v-if="anagrafica.note" class="mb-2">
-                <span class="h6 me-1">Note:</span>
-                <span>{{ anagrafica.note }}</span>
-              </li>
-            </ul>
+              </h6>
+              <h6 v-if="anagrafica.note" class="text-h6">
+                Note:
+                <span class="text-body-1 d-inline-block">{{ anagrafica.note }}</span>
+              </h6>
+            </div>
           </VCardText>
 
           <VDivider />
 
           <!-- Contatti -->
-          <VCardItem>
-            <VCardTitle>Contatti</VCardTitle>
-          </VCardItem>
           <VCardText>
+            <h6 class="text-h6 mb-3">Contatti</h6>
             <template v-if="anagrafica.contatti && anagrafica.contatti.length > 0">
-              <div
-                v-for="contatto in anagrafica.contatti"
-                :key="contatto.contattoId"
-                class="d-flex align-center gap-3 mb-3 cursor-pointer"
-                @click="openContattoEdit(contatto)"
-              >
-                <VAvatar size="32" color="primary" variant="tonal">
-                  <span class="text-caption">{{ contatto.nome[0] }}{{ contatto.cognome[0] }}</span>
-                </VAvatar>
-                <div class="flex-grow-1" style="min-width: 0;">
-                  <span class="text-body-1 font-weight-medium d-block text-truncate">
-                    {{ contatto.nome }} {{ contatto.cognome }}
-                  </span>
-                  <span class="text-body-2 text-disabled">{{ contatto.ruoloContattoNome }}</span>
-                  <div v-if="contatto.email || contatto.cellulare" class="text-body-2 text-disabled">
+              <VList density="compact" class="pa-0">
+                <VListItem
+                  v-for="contatto in anagrafica.contatti"
+                  :key="contatto.contattoId"
+                  class="cursor-pointer px-0"
+                  @click="openContattoEdit(contatto)"
+                >
+                  <VListItemTitle>
+                    <span class="font-weight-medium">{{ contatto.nome }} {{ contatto.cognome }}</span>
+                    <VChip size="x-small" label class="ms-2" :color="contatto.principale ? 'primary' : undefined">{{ contatto.ruoloContattoNome }}</VChip>
+                  </VListItemTitle>
+                  <VListItemSubtitle v-if="contatto.email || contatto.cellulare">
                     {{ [contatto.email, contatto.cellulare].filter(Boolean).join(' | ') }}
-                  </div>
-                </div>
-                <VChip v-if="contatto.principale" size="x-small" color="primary" label>
-                  Principale
-                </VChip>
-              </div>
+                  </VListItemSubtitle>
+                </VListItem>
+              </VList>
             </template>
             <div v-else class="text-disabled text-body-2">
               Nessun contatto associato
@@ -424,9 +410,8 @@ const fullAddress = computed(() => {
           :rules="[requiredValidator]"
         />
       </VCardText>
-      <VCardActions>
-        <VSpacer />
-        <VBtn variant="text" @click="disattivaDialogOpen = false">
+      <VCardText class="d-flex justify-end gap-4">
+        <VBtn variant="tonal" color="secondary" @click="disattivaDialogOpen = false">
           Annulla
         </VBtn>
         <VBtn
@@ -437,7 +422,7 @@ const fullAddress = computed(() => {
         >
           Disattiva
         </VBtn>
-      </VCardActions>
+      </VCardText>
     </VCard>
   </VDialog>
 
@@ -447,38 +432,20 @@ const fullAddress = computed(() => {
       <VCardText>
         Sei sicuro di voler eliminare questa anagrafica? L'operazione non può essere annullata.
       </VCardText>
-      <VCardActions>
-        <VSpacer />
-        <VBtn variant="text" @click="deleteDialogOpen = false">
+      <VCardText class="d-flex justify-end gap-4">
+        <VBtn variant="tonal" color="secondary" @click="deleteDialogOpen = false">
           Annulla
         </VBtn>
         <VBtn
           color="error"
+          prepend-icon="tabler-trash"
           :loading="deleteLoading"
           @click="confirmDelete"
         >
           Elimina
         </VBtn>
-      </VCardActions>
+      </VCardText>
     </VCard>
   </VDialog>
 
 </template>
-
-<style lang="scss" scoped>
-.list-unstyled {
-  padding-left: 0;
-  list-style: none;
-}
-
-.cursor-pointer {
-  cursor: pointer;
-
-  &:hover {
-    background-color: rgba(var(--v-theme-on-surface), 0.04);
-    border-radius: 8px;
-    margin-inline: -8px;
-    padding-inline: 8px;
-  }
-}
-</style>

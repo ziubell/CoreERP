@@ -2,6 +2,7 @@
 import Cropper from 'cropperjs'
 import 'cropperjs/dist/cropper.css'
 import { useNotificheStore } from '@/stores/notifiche'
+import { formatNome, formatCognome } from '@/utils/formatters'
 
 const notificheStore = useNotificheStore()
 const userData = useCookie<any>('userData')
@@ -58,6 +59,9 @@ const fetchProfile = async () => {
 const saveProfile = async () => {
   isLoading.value = true
   try {
+    if (profileData.value.nome) profileData.value.nome = formatNome(profileData.value.nome)
+    if (profileData.value.cognome) profileData.value.cognome = formatCognome(profileData.value.cognome)
+
     const res = await $api('/profile', {
       method: 'PUT',
       body: {
@@ -244,14 +248,10 @@ onMounted(fetchProfile)
               <VBtn
                 v-if="profileData.foto"
                 color="error"
-                variant="tonal"
+                prepend-icon="tabler-trash"
                 @click="deletePhoto"
               >
-                <VIcon
-                  start
-                  icon="tabler-trash"
-                />
-                Rimuovi
+                Elimina
               </VBtn>
             </div>
 
@@ -285,6 +285,7 @@ onMounted(fetchProfile)
                   v-model="profileData.nome"
                   label="Nome"
                   placeholder="Il tuo nome"
+                  @blur="profileData.nome && (profileData.nome = formatNome(profileData.nome))"
                 />
               </VCol>
 
@@ -296,6 +297,7 @@ onMounted(fetchProfile)
                   v-model="profileData.cognome"
                   label="Cognome"
                   placeholder="Il tuo cognome"
+                  @blur="profileData.cognome && (profileData.cognome = formatCognome(profileData.cognome))"
                 />
               </VCol>
 
@@ -350,18 +352,13 @@ onMounted(fetchProfile)
                 <div class="d-flex gap-4">
                   <VBtn
                     type="submit"
+                    color="primary"
+                    prepend-icon="tabler-device-floppy"
                     :loading="isLoading"
                   >
-                    Salva modifiche
+                    Salva
                   </VBtn>
 
-                  <VBtn
-                    variant="tonal"
-                    color="secondary"
-                    @click="fetchProfile"
-                  >
-                    Annulla
-                  </VBtn>
                 </div>
               </VCol>
             </VRow>
@@ -401,25 +398,14 @@ onMounted(fetchProfile)
         </div>
       </VCardText>
 
-      <VCardActions class="justify-end pa-4">
-        <VBtn
-          variant="tonal"
-          color="secondary"
-          @click="closeCropDialog"
-        >
+      <VCardText class="d-flex justify-end gap-4">
+        <VBtn variant="tonal" color="secondary" @click="closeCropDialog">
           Annulla
         </VBtn>
-        <VBtn
-          color="primary"
-          @click="applyCrop"
-        >
-          <VIcon
-            start
-            icon="tabler-crop"
-          />
-          Applica
+        <VBtn color="primary" prepend-icon="tabler-device-floppy" @click="applyCrop">
+          Salva
         </VBtn>
-      </VCardActions>
+      </VCardText>
     </VCard>
   </VDialog>
 

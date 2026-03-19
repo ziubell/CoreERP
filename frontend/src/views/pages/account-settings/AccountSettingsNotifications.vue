@@ -3,7 +3,6 @@ import type { PreferenzaNotificaApi } from '@/types/notifiche'
 import { useNotificheStore } from '@/stores/notifiche'
 import { $api } from '@/utils/api'
 
-
 const store = useNotificheStore()
 const loading = ref(true)
 const saving = ref(false)
@@ -20,7 +19,6 @@ const retentionOptions = [
   { title: '1 anno', value: 365 },
   { title: 'Mai', value: 0 },
 ]
-
 
 interface PreferenzaRow {
   tipoNotificaId: number
@@ -43,6 +41,8 @@ const moduliRaggruppati = computed(() => {
   }
   return grouped
 })
+
+const showTeams = computed(() => teamsModuleEnabled.value && hasMicrosoft.value)
 
 onMounted(async () => {
   try {
@@ -109,139 +109,85 @@ const saveNotifications = async () => {
     saving.value = false
   }
 }
-
 </script>
 
 <template>
-  <VRow>
-    <VCol cols="12">
-      <VCard title="Notifiche">
-        <VCardText>
-          <div
-            v-if="loading"
-            class="d-flex justify-center pa-4"
-          >
-            <VProgressCircular indeterminate />
-          </div>
+  <VCard>
+    <VCardText>
+      <div v-if="loading" class="d-flex justify-center pa-4">
+        <VProgressCircular indeterminate />
+      </div>
 
-          <template v-else>
-            <!-- Retention setting -->
-            <h6 class="text-h6 mb-3">
-              Pulizia automatica
-            </h6>
-            <VRow>
-              <VCol
-                cols="12"
-                sm="4"
-              >
-                <VSelect
-                  v-model="giorniRetention"
-                  :items="retentionOptions"
-                  label="Elimina notifiche dopo"
-                  density="compact"
-                  hide-details
-                />
-              </VCol>
-            </VRow>
+      <template v-else>
+        <!-- Pulizia automatica -->
+        <h5 class="text-h5 mb-4">Pulizia automatica</h5>
+        <VRow>
+          <VCol cols="12" sm="4">
+            <AppSelect
+              v-model="giorniRetention"
+              :items="retentionOptions"
+              label="Elimina notifiche dopo"
+            />
+          </VCol>
+        </VRow>
 
-            <template v-if="preferenzeRows.length > 0">
-              <template
-                v-for="(rows, modulo) in moduliRaggruppati"
-                :key="modulo"
-              >
-                <h6 class="text-h6 mb-3 mt-6">
-                  {{ modulo }}
-                </h6>
+        <!-- Preferenze per modulo -->
+        <template v-if="preferenzeRows.length > 0">
+          <template v-for="(rows, modulo) in moduliRaggruppati" :key="modulo">
+            <h5 class="text-h5 mb-2 mt-6">{{ modulo }}</h5>
 
-                <VTable class="text-no-wrap mb-4">
-                  <thead>
-                    <tr>
-                      <th scope="col">
-                        Tipo
-                      </th>
-                      <th
-                        scope="col"
-                        class="text-center"
-                      >
-                        Email
-                      </th>
-                      <th
-                        scope="col"
-                        class="text-center"
-                      >
-                        Browser
-                      </th>
-                      <th
-                        v-if="teamsModuleEnabled && hasMicrosoft"
-                        scope="col"
-                        class="text-center"
-                      >
-                        Teams
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      v-for="row in rows"
-                      :key="row.tipoNotificaId"
-                    >
-                      <td>{{ row.descrizione }}</td>
-                      <td class="text-center">
-                        <VCheckbox
-                          v-model="row.email"
-                          density="compact"
-                          hide-details
-                          class="d-inline-flex"
-                        />
-                      </td>
-                      <td class="text-center">
-                        <VCheckbox
-                          v-model="row.browser"
-                          density="compact"
-                          hide-details
-                          class="d-inline-flex"
-                        />
-                      </td>
-                      <td
-                        v-if="teamsModuleEnabled && hasMicrosoft"
-                        class="text-center"
-                      >
-                        <VCheckbox
-                          v-model="row.teams"
-                          density="compact"
-                          hide-details
-                          class="d-inline-flex"
-                        />
-                      </td>
-                    </tr>
-                  </tbody>
-                </VTable>
-              </template>
-            </template>
-
-            <p
-              v-else
-              class="text-medium-emphasis pa-4 mt-4"
-            >
-              Nessun tipo di notifica disponibile.
-            </p>
+            <VTable class="text-no-wrap mb-6 border rounded">
+              <thead>
+                <tr>
+                  <th>Tipo</th>
+                  <th class="text-center" style="width: 100px;">Email</th>
+                  <th class="text-center" style="width: 100px;">Browser</th>
+                  <th v-if="showTeams" class="text-center" style="width: 100px;">Teams</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in rows" :key="row.tipoNotificaId">
+                  <td>{{ row.descrizione }}</td>
+                  <td class="text-center">
+                    <VCheckbox
+                      v-model="row.email"
+                      density="compact"
+                      hide-details
+                      class="d-inline-flex"
+                    />
+                  </td>
+                  <td class="text-center">
+                    <VCheckbox
+                      v-model="row.browser"
+                      density="compact"
+                      hide-details
+                      class="d-inline-flex"
+                    />
+                  </td>
+                  <td v-if="showTeams" class="text-center">
+                    <VCheckbox
+                      v-model="row.teams"
+                      density="compact"
+                      hide-details
+                      class="d-inline-flex"
+                    />
+                  </td>
+                </tr>
+              </tbody>
+            </VTable>
           </template>
-        </VCardText>
+        </template>
 
-        <VDivider />
+        <p v-else class="text-medium-emphasis pa-4">
+          Nessun tipo di notifica disponibile.
+        </p>
 
-        <VCardText>
-          <div class="d-flex gap-4">
-            <VBtn
-              :loading="saving"
-              @click="saveNotifications"
-            >
-              Salva modifiche
-            </VBtn>
-          </div>
-        </VCardText>
-      </VCard>
-    </VCol>
-  </VRow>
-
+        <div class="d-flex gap-4 mt-4">
+          <VBtn color="primary" prepend-icon="tabler-device-floppy" :loading="saving" @click="saveNotifications">
+            Salva
+          </VBtn>
+        </div>
+      </template>
+    </VCardText>
+  </VCard>
 </template>

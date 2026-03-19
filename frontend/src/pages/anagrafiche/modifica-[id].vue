@@ -4,6 +4,7 @@ import type { UpdateAnagraficaRequest, TipoSoggetto, PeriodicitaPagamento, Anagr
 import { PERIODICITA_LABELS } from '@/types/anagrafica'
 import { useNotificheStore } from '@/stores/notifiche'
 import { requiredValidator, partitaIvaValidator, codiceFiscaleValidator } from '@/@core/utils/validators'
+import { formatNome, formatCognome, formatRagioneSociale } from '@/utils/formatters'
 import ContattoDialog from '@/components/anagrafica/ContattoDialog.vue'
 import type { ContattoDialogData } from '@/components/anagrafica/ContattoDialog.vue'
 
@@ -200,6 +201,10 @@ async function submit() {
 
   saving.value = true
   try {
+    if (form.value.ragioneSociale) form.value.ragioneSociale = formatRagioneSociale(form.value.ragioneSociale)
+    if (form.value.nome) form.value.nome = formatNome(form.value.nome)
+    if (form.value.cognome) form.value.cognome = formatCognome(form.value.cognome)
+
     // 1. Update anagrafica data
     await store.update(id.value, form.value)
 
@@ -309,6 +314,7 @@ async function submit() {
                 v-model="form.ragioneSociale"
                 label="Ragione Sociale"
                 :rules="[requiredValidator]"
+                @blur="form.ragioneSociale && (form.ragioneSociale = formatRagioneSociale(form.ragioneSociale))"
               />
             </VCol>
 
@@ -318,6 +324,7 @@ async function submit() {
                   v-model="form.nome"
                   label="Nome"
                   :rules="[requiredValidator]"
+                  @blur="form.nome && (form.nome = formatNome(form.nome))"
                 />
               </VCol>
               <VCol cols="12" md="6">
@@ -325,6 +332,7 @@ async function submit() {
                   v-model="form.cognome"
                   label="Cognome"
                   :rules="[requiredValidator]"
+                  @blur="form.cognome && (form.cognome = formatCognome(form.cognome))"
                 />
               </VCol>
             </template>
@@ -422,53 +430,52 @@ async function submit() {
 
       <!-- Contatti Collegati -->
       <VCard title="Contatti Collegati" class="mb-6">
+        <VTable v-if="visibleContatti.length > 0" density="comfortable">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Ruolo</th>
+              <th>Email</th>
+              <th>Cellulare</th>
+              <th>Principale</th>
+              <th class="text-center" style="width: 140px;">Azioni</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(c, index) in visibleContatti" :key="index">
+              <td class="font-weight-medium">{{ c.nome }} {{ c.cognome }}</td>
+              <td>
+                <VChip size="small" label>{{ c.ruoloContattoNome || getRuoloNome(c.ruoloContattoId) }}</VChip>
+              </td>
+              <td>{{ c.email || '—' }}</td>
+              <td>{{ c.cellulare || '—' }}</td>
+              <td>
+                <VIcon v-if="c.principale" icon="tabler-check" color="primary" size="20" />
+              </td>
+              <td class="text-center">
+                <IconBtn size="small" @click="moveContatto(index, -1)" :disabled="index === 0">
+                  <VIcon icon="tabler-arrow-up" size="18" />
+                </IconBtn>
+                <IconBtn size="small" @click="moveContatto(index, 1)" :disabled="index === visibleContatti.length - 1">
+                  <VIcon icon="tabler-arrow-down" size="18" />
+                </IconBtn>
+                <IconBtn size="small" @click="openEditContatto(index)">
+                  <VIcon icon="tabler-edit" size="18" />
+                </IconBtn>
+                <IconBtn size="small" color="error" @click="removeContatto(index)">
+                  <VIcon icon="tabler-trash" size="18" />
+                </IconBtn>
+              </td>
+            </tr>
+          </tbody>
+        </VTable>
+
+        <VCardText v-else class="text-disabled text-body-2 py-4 text-center">
+          Nessun contatto collegato
+        </VCardText>
+
         <VCardText>
-          <VTable v-if="visibleContatti.length > 0" density="comfortable">
-            <thead>
-              <tr>
-                <th>Nome</th>
-                <th>Ruolo</th>
-                <th>Email</th>
-                <th>Cellulare</th>
-                <th>Principale</th>
-                <th class="text-center" style="width: 140px;">Azioni</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(c, index) in visibleContatti" :key="index">
-                <td class="font-weight-medium">{{ c.nome }} {{ c.cognome }}</td>
-                <td>
-                  <VChip size="small" label>{{ c.ruoloContattoNome || getRuoloNome(c.ruoloContattoId) }}</VChip>
-                </td>
-                <td>{{ c.email || '—' }}</td>
-                <td>{{ c.cellulare || '—' }}</td>
-                <td>
-                  <VIcon v-if="c.principale" icon="tabler-check" color="primary" size="20" />
-                </td>
-                <td class="text-center">
-                  <IconBtn size="small" @click="moveContatto(index, -1)" :disabled="index === 0">
-                    <VIcon icon="tabler-arrow-up" size="18" />
-                  </IconBtn>
-                  <IconBtn size="small" @click="moveContatto(index, 1)" :disabled="index === visibleContatti.length - 1">
-                    <VIcon icon="tabler-arrow-down" size="18" />
-                  </IconBtn>
-                  <IconBtn size="small" @click="openEditContatto(index)">
-                    <VIcon icon="tabler-edit" size="18" />
-                  </IconBtn>
-                  <IconBtn size="small" color="error" @click="removeContatto(index)">
-                    <VIcon icon="tabler-trash" size="18" />
-                  </IconBtn>
-                </td>
-              </tr>
-            </tbody>
-          </VTable>
-
-          <div v-else class="text-disabled text-body-2 py-4 text-center">
-            Nessun contatto collegato
-          </div>
-
           <VBtn
-            class="mt-4"
             color="primary"
             variant="tonal"
             prepend-icon="tabler-plus"
@@ -482,7 +489,8 @@ async function submit() {
       <!-- Bottom submit button -->
       <div class="d-flex justify-end">
         <VBtn
-          variant="text"
+          variant="tonal"
+          color="secondary"
           class="me-4"
           @click="router.push(`/anagrafiche/${id}`)"
         >

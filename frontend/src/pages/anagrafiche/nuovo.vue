@@ -5,6 +5,7 @@ import type { CreateAnagraficaRequest, TipoSoggetto, TipoAnagrafica, Periodicita
 import { PERIODICITA_LABELS } from '@/types/anagrafica'
 import { useNotificheStore } from '@/stores/notifiche'
 import { requiredValidator, partitaIvaValidator, codiceFiscaleValidator } from '@/@core/utils/validators'
+import { formatNome, formatCognome, formatRagioneSociale } from '@/utils/formatters'
 
 const router = useRouter()
 const store = useAnagraficheStore()
@@ -147,9 +148,16 @@ function handleBack() {
 async function submit() {
   saving.value = true
   try {
+    if (form.value.ragioneSociale) form.value.ragioneSociale = formatRagioneSociale(form.value.ragioneSociale)
+    if (form.value.nome) form.value.nome = formatNome(form.value.nome)
+    if (form.value.cognome) form.value.cognome = formatCognome(form.value.cognome)
+
     const request = { ...form.value } as CreateAnagraficaRequest
 
     if (showPrimoContatto.value && primoContatto.value.nome && primoContatto.value.cognome) {
+      primoContatto.value.nome = formatNome(primoContatto.value.nome)
+      primoContatto.value.cognome = formatCognome(primoContatto.value.cognome)
+
       request.primoContatto = {
         nome: primoContatto.value.nome,
         cognome: primoContatto.value.cognome,
@@ -239,6 +247,7 @@ async function submit() {
                         v-model="form.ragioneSociale"
                         label="Ragione Sociale"
                         :rules="isGiuridica ? [requiredValidator] : []"
+                        @blur="form.ragioneSociale && (form.ragioneSociale = formatRagioneSociale(form.ragioneSociale))"
                       />
                     </VCol>
 
@@ -248,6 +257,7 @@ async function submit() {
                         v-model="form.nome"
                         label="Nome"
                         :rules="!isGiuridica ? [requiredValidator] : []"
+                        @blur="form.nome && (form.nome = formatNome(form.nome))"
                       />
                     </VCol>
                     <VCol v-show="!isGiuridica" cols="12" md="6">
@@ -255,6 +265,7 @@ async function submit() {
                         v-model="form.cognome"
                         label="Cognome"
                         :rules="!isGiuridica ? [requiredValidator] : []"
+                        @blur="form.cognome && (form.cognome = formatCognome(form.cognome))"
                       />
                     </VCol>
 
@@ -401,6 +412,7 @@ async function submit() {
                         v-model="primoContatto.nome"
                         label="Nome"
                         :rules="[requiredValidator]"
+                        @blur="primoContatto.nome && (primoContatto.nome = formatNome(primoContatto.nome))"
                       />
                     </VCol>
                     <VCol cols="12" md="6">
@@ -408,6 +420,7 @@ async function submit() {
                         v-model="primoContatto.cognome"
                         label="Cognome"
                         :rules="[requiredValidator]"
+                        @blur="primoContatto.cognome && (primoContatto.cognome = formatCognome(primoContatto.cognome))"
                       />
                     </VCol>
                     <VCol cols="12" md="6">
@@ -443,6 +456,7 @@ async function submit() {
             <VBtn
               v-if="currentStep > 0"
               variant="tonal"
+              color="secondary"
               prepend-icon="tabler-arrow-left"
               @click="handleBack"
             >
@@ -460,12 +474,12 @@ async function submit() {
             </VBtn>
             <VBtn
               v-else
-              color="success"
-              prepend-icon="tabler-check"
+              color="primary"
+              prepend-icon="tabler-device-floppy"
               :loading="saving"
               @click="submit"
             >
-              Crea Anagrafica
+              Salva
             </VBtn>
           </VCardActions>
         </VCol>

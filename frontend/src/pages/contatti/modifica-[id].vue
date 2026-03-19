@@ -1,21 +1,19 @@
 <script setup lang="ts">
 import { useContattiStore } from '@/stores/contatti'
+import { useNotificheStore } from '@/stores/notifiche'
 import type { UpdateContattoRequest } from '@/types/anagrafica'
 import { requiredValidator } from '@/@core/utils/validators'
+import { formatNome, formatCognome } from '@/utils/formatters'
 
 const route = useRoute()
 const router = useRouter()
 const store = useContattiStore()
+const notificheStore = useNotificheStore()
 
 const id = computed(() => Number(route.params.id))
 const loading = ref(false)
 const saving = ref(false)
 const formRef = ref()
-
-// Snackbar
-const snackbar = ref(false)
-const snackbarMessage = ref('')
-const snackbarColor = ref('success')
 
 const form = ref<UpdateContattoRequest>({
   nome: '',
@@ -49,16 +47,15 @@ async function submit() {
 
   saving.value = true
   try {
+    if (form.value.nome) form.value.nome = formatNome(form.value.nome)
+    if (form.value.cognome) form.value.cognome = formatCognome(form.value.cognome)
+
     await store.update(id.value, form.value)
-    snackbarMessage.value = 'Contatto aggiornato con successo'
-    snackbarColor.value = 'success'
-    snackbar.value = true
+    notificheStore.addToast('Contatto aggiornato con successo', null, null, 'success')
     router.push(`/contatti/${id.value}`)
   }
   catch (error: any) {
-    snackbarMessage.value = error?.data?.message || error?.message || 'Errore durante il salvataggio'
-    snackbarColor.value = 'error'
-    snackbar.value = true
+    notificheStore.addToast('Errore durante il salvataggio', error?.data?.message || error?.message || null, null, 'error')
   }
   finally {
     saving.value = false
@@ -101,6 +98,7 @@ async function submit() {
                 v-model="form.nome"
                 label="Nome"
                 :rules="[requiredValidator]"
+                @blur="form.nome && (form.nome = formatNome(form.nome))"
               />
             </VCol>
             <VCol cols="12" md="6">
@@ -108,6 +106,7 @@ async function submit() {
                 v-model="form.cognome"
                 label="Cognome"
                 :rules="[requiredValidator]"
+                @blur="form.cognome && (form.cognome = formatCognome(form.cognome))"
               />
             </VCol>
             <VCol cols="12" md="6">
@@ -142,7 +141,8 @@ async function submit() {
       <!-- Bottom submit button -->
       <div class="d-flex justify-end">
         <VBtn
-          variant="text"
+          variant="tonal"
+          color="secondary"
           class="me-4"
           :to="`/contatti/${id}`"
         >
@@ -154,13 +154,5 @@ async function submit() {
       </div>
     </VForm>
 
-    <!-- Snackbar -->
-    <VSnackbar
-      v-model="snackbar"
-      :color="snackbarColor"
-      :timeout="5000"
-    >
-      {{ snackbarMessage }}
-    </VSnackbar>
   </div>
 </template>

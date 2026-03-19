@@ -48,8 +48,7 @@ onMounted(loadData)
     <VCard>
       <VCardItem>
         <VCardTitle class="d-flex align-center">
-          <VIcon icon="tabler-users" size="28" class="me-2" />
-          <span>Contatti</span>
+          Contatti
           <VSpacer />
           <VBtn
             color="primary"
@@ -64,7 +63,7 @@ onMounted(loadData)
       <VDivider />
 
       <VCardText>
-        <VRow class="mb-4">
+        <VRow>
           <VCol cols="12" md="6">
             <AppTextField
               v-model="ricerca"
@@ -74,48 +73,50 @@ onMounted(loadData)
             />
           </VCol>
         </VRow>
-
-        <VDataTableServer
-          :headers="headers"
-          :items="store.items"
-          :items-length="store.totalCount"
-          :loading="store.loading"
-          :page="pagina"
-          :items-per-page="dimensionePagina"
-          @update:page="pagina = $event"
-          @update:items-per-page="dimensionePagina = $event; loadData()"
-          class="text-no-wrap"
-        >
-          <template #item.nome="{ item }">
-            <a
-              class="text-body-1 font-weight-medium text-high-emphasis cursor-pointer"
-              @click="goToDetail(item.id)"
-            >
-              {{ item.nome }}
-            </a>
-          </template>
-
-          <template #item.email="{ item }">
-            <span v-if="item.email">
-              <VIcon icon="tabler-mail" size="14" class="me-1" />{{ item.email }}
-            </span>
-            <span v-else class="text-disabled">-</span>
-          </template>
-
-          <template #item.actions="{ item }">
-            <IconBtn @click="goToDetail(item.id)">
-              <VIcon icon="tabler-eye" />
-            </IconBtn>
-          </template>
-
-          <template #no-data>
-            <div class="text-center py-6 text-disabled">
-              <VIcon icon="tabler-database-off" size="48" class="mb-2" />
-              <p class="text-body-1">Nessun contatto trovato</p>
-            </div>
-          </template>
-        </VDataTableServer>
       </VCardText>
+
+      <VDivider />
+
+      <VDataTableServer
+        :headers="headers"
+        :items="store.items"
+        :items-length="store.totalCount"
+        :loading="store.loading"
+        :page="pagina"
+        :items-per-page="dimensionePagina"
+        class="text-no-wrap"
+        @update:page="pagina = $event"
+        @update:items-per-page="dimensionePagina = $event; loadData()"
+      >
+        <template #item.nome="{ item }">
+          <a
+            class="text-body-1 font-weight-medium text-high-emphasis cursor-pointer"
+            @click="goToDetail(item.id)"
+          >
+            {{ item.nome }}
+          </a>
+        </template>
+
+        <template #item.email="{ item }">
+          <span v-if="item.email">
+            <VIcon icon="tabler-mail" size="14" class="me-1" />{{ item.email }}
+          </span>
+          <span v-else class="text-disabled">-</span>
+        </template>
+
+        <template #item.actions="{ item }">
+          <IconBtn @click="goToDetail(item.id)">
+            <VIcon icon="tabler-eye" />
+          </IconBtn>
+        </template>
+
+        <template #no-data>
+          <div class="text-center py-6 text-disabled">
+            <VIcon icon="tabler-database-off" size="48" class="mb-2" />
+            <p class="text-body-1">Nessun contatto trovato</p>
+          </div>
+        </template>
+      </VDataTableServer>
     </VCard>
   </div>
 </template>

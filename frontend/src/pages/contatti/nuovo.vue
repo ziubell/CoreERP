@@ -1,18 +1,16 @@
 <script setup lang="ts">
 import { useContattiStore } from '@/stores/contatti'
+import { useNotificheStore } from '@/stores/notifiche'
 import type { CreateContattoRequest } from '@/types/anagrafica'
 import { requiredValidator } from '@/@core/utils/validators'
+import { formatNome, formatCognome } from '@/utils/formatters'
 
 const router = useRouter()
 const store = useContattiStore()
+const notificheStore = useNotificheStore()
 
 const saving = ref(false)
 const formRef = ref()
-
-// Snackbar
-const snackbar = ref(false)
-const snackbarMessage = ref('')
-const snackbarColor = ref('success')
 
 const form = ref<CreateContattoRequest>({
   nome: '',
@@ -25,13 +23,14 @@ async function submit() {
 
   saving.value = true
   try {
+    if (form.value.nome) form.value.nome = formatNome(form.value.nome)
+    if (form.value.cognome) form.value.cognome = formatCognome(form.value.cognome)
+
     const result = await store.create(form.value)
     router.push(`/contatti/${result.id}`)
   }
   catch (error: any) {
-    snackbarMessage.value = error?.data?.message || error?.message || 'Errore durante la creazione'
-    snackbarColor.value = 'error'
-    snackbar.value = true
+    notificheStore.addToast('Errore durante la creazione', error?.data?.message || error?.message || null, null, 'error')
   }
   finally {
     saving.value = false
@@ -52,7 +51,7 @@ async function submit() {
         <h4 class="text-h4">Nuovo Contatto</h4>
         <VSpacer />
         <VBtn type="submit" color="primary" :loading="saving" prepend-icon="tabler-device-floppy">
-          Crea Contatto
+          Salva
         </VBtn>
       </div>
 
@@ -65,6 +64,7 @@ async function submit() {
                 v-model="form.nome"
                 label="Nome"
                 :rules="[requiredValidator]"
+                @blur="form.nome && (form.nome = formatNome(form.nome))"
               />
             </VCol>
             <VCol cols="12" md="6">
@@ -72,6 +72,7 @@ async function submit() {
                 v-model="form.cognome"
                 label="Cognome"
                 :rules="[requiredValidator]"
+                @blur="form.cognome && (form.cognome = formatCognome(form.cognome))"
               />
             </VCol>
             <VCol cols="12" md="6">
@@ -106,25 +107,18 @@ async function submit() {
       <!-- Bottom submit button -->
       <div class="d-flex justify-end">
         <VBtn
-          variant="text"
+          variant="tonal"
+          color="secondary"
           class="me-4"
           :to="{ path: '/contatti' }"
         >
           Annulla
         </VBtn>
         <VBtn type="submit" color="primary" :loading="saving" prepend-icon="tabler-device-floppy">
-          Crea Contatto
+          Salva
         </VBtn>
       </div>
     </VForm>
 
-    <!-- Snackbar -->
-    <VSnackbar
-      v-model="snackbar"
-      :color="snackbarColor"
-      :timeout="5000"
-    >
-      {{ snackbarMessage }}
-    </VSnackbar>
   </div>
 </template>
