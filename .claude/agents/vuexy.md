@@ -279,11 +279,14 @@ Per form con pochi campi, card singola:
 
 - Header: `VBtn variant="text" icon="tabler-arrow-left"` + titolo `<h4 class="text-h4">`
 - Il titolo cambia: `isEditMode ? 'Modifica Contatto' : 'Nuovo Contatto'`
-- Pulsante submit nell'header E in fondo al form
-- Pulsante annulla: `VBtn variant="tonal" color="secondary"`
 
 ### Regole Form (comuni a entrambe le varianti)
 
+- **Card unica**: tutti i campi, note incluse, vanno nella stessa card — MAI card separate per sezioni (es. "Note" in una card a parte)
+- **Pulsante Salva sempre a destra**: allineato a destra con `d-flex justify-end`
+- **Form corti**: pulsante Salva solo in fondo alla card
+- **Form lunghi**: pulsante Salva sia nell'header (allineato a destra dopo il titolo) che in fondo alla card
+- **Pulsante Salva dentro la card**: il pulsante submit va dentro la `VCardText`, MAI fuori dalla card
 - Campi form: usa **sempre** i wrapper `AppTextField`, `AppSelect`, `AppTextarea`, `AppAutocomplete` — MAI i componenti Vuetify diretti
 - Layout campi: `VRow` > `VCol cols="12" md="6"` (o md="3", md="4", md="8" secondo il contesto)
 - Validazione: `VForm ref="formRef"` → `await ref.validate()` → controlla `{ valid }`
@@ -291,8 +294,36 @@ Per form con pochi campi, card singola:
 - Notifiche errore: `notificheStore.addToast()`
 - Submit: try/catch con `finally { saving.value = false }`, redirect con `router.push()`
 - Pulsante submit: `VBtn color="primary" prepend-icon="tabler-device-floppy"` con testo **"Salva"**
-- Separatori sezioni: `<VCol cols="12"><VDivider class="my-2" /></VCol>`
 - MAI creare due pagine separate per creazione e modifica
+- MAI creare card separate per sezioni del form (note, dettagli, etc.)
+
+```html
+<!-- Pattern form con pulsante in alto e in basso -->
+<div class="d-flex align-center mb-6 flex-wrap gap-4">
+  <VBtn variant="text" icon="tabler-arrow-left" :to="{ path: '/modulo' }" />
+  <h4 class="text-h4">{{ isEditMode ? 'Modifica X' : 'Nuovo X' }}</h4>
+  <VSpacer />
+  <!-- Pulsante header (per form lunghi) -->
+  <VBtn type="submit" color="primary" :loading="saving" prepend-icon="tabler-device-floppy">
+    Salva
+  </VBtn>
+</div>
+
+<VCard>
+  <VCardText>
+    <VRow>
+      <!-- tutti i campi qui, incluse note -->
+      <VCol cols="12">
+        <div class="d-flex justify-end">
+          <VBtn type="submit" color="primary" :loading="saving" prepend-icon="tabler-device-floppy">
+            Salva
+          </VBtn>
+        </div>
+      </VCol>
+    </VRow>
+  </VCardText>
+</VCard>
+```
 
 ---
 
