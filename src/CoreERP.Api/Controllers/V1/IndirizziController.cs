@@ -5,6 +5,8 @@ using CoreERP.Domain.Entities.Anagrafica;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using StoricoModifica = CoreERP.Domain.Entities.Anagrafica.StoricoModifica;
+
 namespace CoreERP.Api.Controllers.V1;
 
 [ApiController]
@@ -14,11 +16,13 @@ public class IndirizziController : ControllerBase
 {
     private readonly IIndirizzoRepository _repository;
     private readonly IAnagraficaRepository _anagraficaRepository;
+    private readonly IStoricoModificaRepository _storicoRepository;
 
-    public IndirizziController(IIndirizzoRepository repository, IAnagraficaRepository anagraficaRepository)
+    public IndirizziController(IIndirizzoRepository repository, IAnagraficaRepository anagraficaRepository, IStoricoModificaRepository storicoRepository)
     {
         _repository = repository;
         _anagraficaRepository = anagraficaRepository;
+        _storicoRepository = storicoRepository;
     }
 
     [HttpGet]
@@ -91,6 +95,23 @@ public class IndirizziController : ControllerBase
         };
 
         var result = await _repository.AddAsync(indirizzo);
+
+        // Traccia nello storico
+        var label = $"{request.Strada} {request.Numero}, {request.Citta}";
+        var uso = string.Join(", ", new[] { request.IsFatturazione ? "Fatturazione" : null, request.IsImpianto ? "Impianto" : null }.Where(x => x != null));
+        await _storicoRepository.AddAsync(new StoricoModifica
+        {
+            EntitaTipo = "Anagrafica",
+            EntitaId = request.AnagraficaId,
+            Campo = "Indirizzo",
+            ValorePrecedente = null,
+            ValoreNuovo = label,
+            ValoreNuovoLabel = $"{label} ({uso})",
+            DataModifica = DateTime.UtcNow,
+            ModificatoDa = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "",
+            Note = "Aggiunta indirizzo",
+        });
+
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, MapToDto(result));
     }
 
@@ -128,7 +149,25 @@ public class IndirizziController : ControllerBase
         var existing = await _repository.GetByIdAsync(id);
         if (existing == null) return NotFound();
 
+        var label = $"{existing.Strada} {existing.Numero}, {existing.Citta}";
+        var anagraficaId = existing.AnagraficaId;
+
         await _repository.DeleteAsync(id);
+
+        // Traccia nello storico
+        await _storicoRepository.AddAsync(new StoricoModifica
+        {
+            EntitaTipo = "Anagrafica",
+            EntitaId = anagraficaId,
+            Campo = "Indirizzo",
+            ValorePrecedente = label,
+            ValorePrecedenteLabel = label,
+            ValoreNuovo = null,
+            DataModifica = DateTime.UtcNow,
+            ModificatoDa = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "",
+            Note = "Rimozione indirizzo",
+        });
+
         return NoContent();
     }
 

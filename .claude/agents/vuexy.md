@@ -411,6 +411,16 @@ const onFormSubmit = () => {
 - Submit: `@submit.prevent` su `VForm`
 - Pulsanti: Submit `VBtn` primario + Annulla `variant="tonal" color="secondary"`
 - Larghezza responsive: `:width="$vuetify.display.smAndDown ? 'auto' : 900"`
+- **Titolo**: usare sempre la prop `:title` su `VCard`, MAI `<VCardTitle>` diretto. La prop `title` passa tramite `VCardItem` che gestisce padding e allineamento uniformi.
+
+```vue
+<!-- CORRETTO -->
+<VCard :title="dialogTitle">
+
+<!-- SBAGLIATO — padding diverso -->
+<VCard>
+  <VCardTitle>{{ dialogTitle }}</VCardTitle>
+```
 
 ---
 
@@ -1006,6 +1016,33 @@ I nodi figli (children) nella navigazione verticale **non devono avere icona**. 
     { title: 'Anagrafiche', to: 'anagrafiche', icon: { icon: 'tabler-building' } },  // NO
   ],
 }
+```
+
+### 10. Filtri — Placeholder invece di Label
+
+Nei filtri inline (ricerca, dropdown di filtro sopra tabelle o timeline), usare **sempre `placeholder`** al posto di `label`. Il label occupa spazio verticale e rompe l'allineamento orizzontale con altri campi.
+
+**Corretto:**
+```vue
+<AppTextField
+  v-model="ricerca"
+  placeholder="Cerca..."
+  prepend-inner-icon="tabler-search"
+  clearable
+/>
+<AppSelect
+  v-model="tipoFiltro"
+  :items="tipiItems"
+  placeholder="Filtra per tipo..."
+  clearable
+/>
+```
+
+**Sbagliato:**
+```vue
+<!-- NO: label sposta il campo verso il basso -->
+<AppTextField v-model="ricerca" label="Cerca" />
+<AppSelect v-model="tipoFiltro" label="Tipo" :items="tipiItems" />
 ```
 
 ---

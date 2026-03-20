@@ -357,9 +357,7 @@ async function save() {
     max-width="700"
     @update:model-value="$emit('update:modelValue', $event)"
   >
-    <VCard>
-      <VCardTitle>{{ dialogTitle }}</VCardTitle>
-
+    <VCard :title="dialogTitle">
       <VCardText>
         <!-- Comune -->
         <VRow dense>
@@ -562,9 +560,7 @@ async function save() {
 
   <!-- Dialog Verifica Copertura -->
   <VDialog v-model="coperturaDialogOpen" max-width="650">
-    <VCard>
-      <VCardTitle>Verifica Copertura</VCardTitle>
-      <VCardSubtitle>{{ form.strada }} {{ form.numero }}, {{ form.citta }}</VCardSubtitle>
+    <VCard title="Verifica Copertura" :subtitle="`${form.strada} ${form.numero}, ${form.citta}`">
 
       <VCardText v-if="coperturaResult">
         <VAlert

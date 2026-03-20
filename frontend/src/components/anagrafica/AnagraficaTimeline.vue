@@ -36,6 +36,26 @@ const deleteDialogOpen = ref(false)
 const deleteTarget = ref<{ id: number; type: 'messaggio' } | null>(null)
 const deleteLoading = ref(false)
 
+// Filtri
+const filtroRicerca = ref('')
+const filtroTipo = ref<string | undefined>()
+const filtroUtente = ref<string | undefined>()
+const debouncedRicerca = refDebounced(filtroRicerca, 300)
+
+// Lista utenti unici per il filtro
+const utentiDisponibili = computed(() => {
+  const map = new Map<string, string>()
+  for (const s of storico.value) {
+    if (s.modificatoDa && s.modificatoDaNome)
+      map.set(s.modificatoDa, s.modificatoDaNome)
+  }
+  for (const m of messaggi.value) {
+    if (m.userId && m.userNome)
+      map.set(m.userId, m.userNome)
+  }
+  return Array.from(map, ([value, title]) => ({ title, value }))
+})
+
 // Tipo unificato per la timeline
 interface TimelineEntry {
   type: 'modifica' | 'messaggio'
@@ -57,6 +77,40 @@ const timelineEntries = computed<TimelineEntry[]>(() => {
 
   entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   return entries
+})
+
+const filteredEntries = computed(() => {
+  let result = timelineEntries.value
+
+  // Filtro tipo
+  if (filtroTipo.value) {
+    result = result.filter(e => e.type === filtroTipo.value)
+  }
+
+  // Filtro utente
+  if (filtroUtente.value) {
+    result = result.filter(e => {
+      if (e.type === 'messaggio') return e.messaggio!.userId === filtroUtente.value
+      return e.storico!.modificatoDa === filtroUtente.value
+    })
+  }
+
+  // Filtro ricerca
+  const q = debouncedRicerca.value.toLowerCase().trim()
+  if (q) {
+    result = result.filter(e => {
+      if (e.type === 'messaggio') {
+        return e.messaggio!.testo.toLowerCase().includes(q)
+          || e.messaggio!.userNome.toLowerCase().includes(q)
+      }
+      return e.storico!.campo.toLowerCase().includes(q)
+        || (e.storico!.valoreNuovo ?? '').toLowerCase().includes(q)
+        || (e.storico!.valorePrecedente ?? '').toLowerCase().includes(q)
+        || (e.storico!.modificatoDaNome ?? '').toLowerCase().includes(q)
+    })
+  }
+
+  return result
 })
 
 async function loadAll() {
@@ -258,6 +312,9 @@ function getColor(entry: StoricoModificaApi): string {
   if (entry.note?.includes('Conversione')) return 'success'
   if (entry.note?.includes('Disattivazione')) return 'error'
   if (entry.note?.includes('Riattivazione')) return 'success'
+  if (entry.note?.includes('Associazione')) return 'success'
+  if (entry.note?.includes('Aggiunta')) return 'success'
+  if (entry.note?.includes('Rimozione')) return 'error'
   return 'primary'
 }
 
@@ -266,6 +323,9 @@ function getBadgeLabel(entry: StoricoModificaApi): string {
   if (entry.note?.includes('Disattivazione')) return 'Disattivazione'
   if (entry.note?.includes('Riattivazione')) return 'Riattivazione'
   if (entry.note?.includes('Ripristinato')) return 'Ripristino'
+  if (entry.note?.includes('Associazione')) return 'Aggiunta'
+  if (entry.note?.includes('Aggiunta')) return 'Aggiunta'
+  if (entry.note?.includes('Rimozione')) return 'Rimozione'
   return 'Modifica'
 }
 
@@ -352,12 +412,46 @@ onMounted(loadAll)
         </div>
       </div>
 
+      <!-- Filtri -->
+      <VRow dense class="mb-4">
+        <VCol cols="12" sm="5">
+          <AppTextField
+            v-model="filtroRicerca"
+            placeholder="Cerca nella timeline..."
+            prepend-inner-icon="tabler-search"
+            clearable
+            density="compact"
+          />
+        </VCol>
+        <VCol cols="6" sm="4">
+          <AppSelect
+            v-model="filtroTipo"
+            :items="[
+              { title: 'Modifiche', value: 'modifica' },
+              { title: 'Messaggi', value: 'messaggio' },
+            ]"
+            placeholder="Filtra per tipo..."
+            clearable
+            density="compact"
+          />
+        </VCol>
+        <VCol cols="6" sm="3">
+          <AppSelect
+            v-model="filtroUtente"
+            :items="utentiDisponibili"
+            placeholder="Utente..."
+            clearable
+            density="compact"
+          />
+        </VCol>
+      </VRow>
+
       <!-- Loading -->
       <div v-if="loading" class="d-flex justify-center py-6">
         <VProgressCircular indeterminate size="32" />
       </div>
 
-      <div v-else-if="timelineEntries.length === 0" class="text-center text-disabled py-6">
+      <div v-else-if="filteredEntries.length === 0" class="text-center text-disabled py-6">
         <VIcon icon="tabler-clock" size="48" class="mb-2" />
         <p>Nessuna attività registrata</p>
       </div>
@@ -369,7 +463,7 @@ onMounted(loadAll)
           truncate-line="both"
         >
           <VTimelineItem
-            v-for="entry in timelineEntries"
+            v-for="entry in filteredEntries"
             :key="`${entry.type}-${entry.type === 'messaggio' ? entry.messaggio!.id : entry.storico!.id}`"
             :dot-color="entry.type === 'messaggio' ? 'info' : getColor(entry.storico!)"
             size="x-small"

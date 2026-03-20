@@ -365,6 +365,11 @@ public class AnagraficaService : IAnagraficaService
         anagrafica.AnagraficaContatti.Add(associazione);
         await _anagraficaRepo.UpdateAsync(anagrafica);
 
+        // Traccia nello storico
+        await _storicoRepo.AddAsync(CreateStoricoEntry("Anagrafica", anagraficaId, "Contatto",
+            null, $"{contatto.Nome} {contatto.Cognome}", null, $"{contatto.Nome} {contatto.Cognome} ({ruolo.Nome})",
+            userId, "Associazione contatto"));
+
         await _notificaService.InviaAFollowersAsync("Anagrafica", anagraficaId,
             "Anagrafica.ContattoAggiunto", $"Contatto {contatto.Nome} {contatto.Cognome} associato a {anagrafica.Denominazione}",
             mittenteUserId: userId);
@@ -382,8 +387,16 @@ public class AnagraficaService : IAnagraficaService
         var associazione = anagrafica.AnagraficaContatti.FirstOrDefault(ac => ac.ContattoId == contattoId)
             ?? throw new KeyNotFoundException("Associazione non trovata");
 
+        var contatto = await _contattoRepo.GetByIdAsync(contattoId);
+        var nomeContatto = contatto != null ? $"{contatto.Nome} {contatto.Cognome}" : contattoId.ToString();
+
         anagrafica.AnagraficaContatti.Remove(associazione);
         await _anagraficaRepo.UpdateAsync(anagrafica);
+
+        // Traccia nello storico
+        await _storicoRepo.AddAsync(CreateStoricoEntry("Anagrafica", anagraficaId, "Contatto",
+            nomeContatto, null, nomeContatto, null,
+            userId, "Rimozione contatto"));
 
         await _notificaService.InviaAFollowersAsync("Anagrafica", anagraficaId,
             "Anagrafica.ContattoRimosso", $"Contatto rimosso da {anagrafica.Denominazione}",
