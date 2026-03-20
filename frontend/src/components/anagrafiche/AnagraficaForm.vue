@@ -8,6 +8,9 @@ import { requiredValidator, partitaIvaValidator, codiceFiscaleValidator } from '
 import { formatNome, formatCognome, formatRagioneSociale } from '@/utils/formatters'
 import ContattoDialog from '@/components/anagrafica/ContattoDialog.vue'
 import type { ContattoDialogData } from '@/components/anagrafica/ContattoDialog.vue'
+import IndirizzoDialog from '@/components/anagrafica/IndirizzoDialog.vue'
+import { useIndirizziStore } from '@/stores/indirizzi'
+import type { IndirizzoApi } from '@/types/indirizzo'
 
 const props = defineProps<{
   id?: number
@@ -17,6 +20,7 @@ const router = useRouter()
 const store = useAnagraficheStore()
 const notificheStore = useNotificheStore()
 
+const indirizziStore = useIndirizziStore()
 const isEditMode = computed(() => props.id !== undefined)
 const loading = ref(false)
 const saving = ref(false)
@@ -164,6 +168,33 @@ function removeContatto(index: number) {
   }
 }
 
+// Indirizzi
+const indirizzoDialogOpen = ref(false)
+const editingIndirizzo = ref<IndirizzoApi | null>(null)
+const indirizziList = ref<IndirizzoApi[]>([])
+
+function openAddIndirizzo() {
+  editingIndirizzo.value = null
+  indirizzoDialogOpen.value = true
+}
+
+function openEditIndirizzo(indirizzo: IndirizzoApi) {
+  editingIndirizzo.value = indirizzo
+  indirizzoDialogOpen.value = true
+}
+
+async function onIndirizzoSaved() {
+  if (isEditMode.value && props.id) {
+    indirizziList.value = await indirizziStore.fetchByAnagrafica(props.id)
+  }
+}
+
+async function removeIndirizzo(id: number) {
+  await indirizziStore.remove(id)
+  indirizziList.value = indirizziList.value.filter(i => i.id !== id)
+  notificheStore.addToast('Indirizzo rimosso', null, null, 'success')
+}
+
 // Duplicate check
 const duplicateCheckResult = ref<{
   isDuplicate: boolean
@@ -215,7 +246,11 @@ onMounted(async () => {
   try {
     if (isEditMode.value) {
       loading.value = true
-      await Promise.all([store.fetchById(props.id!), store.fetchLookups()])
+      await Promise.all([
+        store.fetchById(props.id!),
+        store.fetchLookups(),
+        indirizziStore.fetchByAnagrafica(props.id!).then(r => { indirizziList.value = r }),
+      ])
       if (store.current) {
         const a = store.current
         form.value = {
@@ -557,10 +592,66 @@ const backRoute = computed(() => isEditMode.value ? `/anagrafiche/${props.id}` :
 
           <!-- Step 3: Indirizzi -->
           <VWindowItem :value="2">
-            <div class="text-center text-disabled py-12">
-              <VIcon icon="tabler-map-pin" size="48" class="mb-4" />
-              <p class="text-body-1">La gestione indirizzi sarà disponibile a breve</p>
-              <p class="text-body-2">Potrai aggiungere indirizzi di fatturazione e impianto dopo la creazione</p>
+            <template v-if="isEditMode">
+              <VTable v-if="indirizziList.length > 0" class="text-no-wrap mb-4 border rounded">
+                <thead>
+                  <tr>
+                    <th>Tipo</th>
+                    <th>Indirizzo</th>
+                    <th>Città</th>
+                    <th>Prov.</th>
+                    <th>Rete</th>
+                    <th class="text-center" style="width: 100px;">Principale</th>
+                    <th class="text-center" style="width: 80px;">Azioni</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="ind in indirizziList"
+                    :key="ind.id"
+                    class="cursor-pointer"
+                    @click="openEditIndirizzo(ind)"
+                  >
+                    <td>
+                      <VChip size="small" :color="ind.tipo === 'Impianto' ? 'info' : 'warning'" variant="tonal">
+                        {{ ind.tipo }}
+                      </VChip>
+                      <VChip v-if="ind.sottoTipo" size="small" class="ms-1" variant="tonal">
+                        {{ ind.sottoTipo }}
+                      </VChip>
+                    </td>
+                    <td>{{ ind.strada }} {{ ind.numero }}</td>
+                    <td>{{ ind.citta }}</td>
+                    <td>{{ ind.provincia }}</td>
+                    <td>{{ ind.rete ?? '—' }}</td>
+                    <td class="text-center">
+                      <VIcon v-if="ind.principale" icon="tabler-check" color="primary" size="20" />
+                    </td>
+                    <td class="text-center">
+                      <IconBtn size="small" color="error" @click.stop="removeIndirizzo(ind.id)">
+                        <VIcon icon="tabler-trash" size="18" />
+                      </IconBtn>
+                    </td>
+                  </tr>
+                </tbody>
+              </VTable>
+
+              <div v-else class="text-disabled text-body-2 py-4 text-center">
+                Nessun indirizzo associato
+              </div>
+
+              <VBtn
+                color="primary"
+                variant="tonal"
+                prepend-icon="tabler-plus"
+                @click="openAddIndirizzo"
+              >
+                Aggiungi Indirizzo
+              </VBtn>
+            </template>
+
+            <div v-else class="text-disabled text-body-2 py-4 text-center">
+              Potrai aggiungere indirizzi dopo la creazione dell'anagrafica
             </div>
           </VWindowItem>
 
@@ -705,6 +796,15 @@ const backRoute = computed(() => isEditMode.value ? `/anagrafiche/${props.id}` :
         </VBtn>
       </VCardText>
     </VCard>
+
+    <!-- Indirizzo Dialog -->
+    <IndirizzoDialog
+      v-if="isEditMode"
+      v-model="indirizzoDialogOpen"
+      :anagrafica-id="props.id!"
+      :indirizzo="editingIndirizzo"
+      @saved="onIndirizzoSaved"
+    />
 
     <!-- Contatto Dialog -->
     <ContattoDialog

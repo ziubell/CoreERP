@@ -25,6 +25,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationIdentityUser>
     public DbSet<MetodoPagamento> MetodiPagamento => Set<MetodoPagamento>();
     public DbSet<MotivoDisattivazione> MotiviDisattivazione => Set<MotivoDisattivazione>();
     public DbSet<StoricoModifica> StoricoModifiche => Set<StoricoModifica>();
+    public DbSet<Indirizzo> Indirizzi => Set<Indirizzo>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -112,6 +113,28 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationIdentityUser>
             entity.HasOne(e => e.MetodoPagamento).WithMany().HasForeignKey(e => e.MetodoPagamentoId);
 
             entity.HasQueryFilter(e => !e.IsDeleted);
+        });
+
+        builder.Entity<Indirizzo>(entity =>
+        {
+            entity.ToTable("Indirizzi");
+            entity.HasIndex(e => new { e.AnagraficaId, e.Tipo });
+
+            entity.Property(e => e.Tipo).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.SottoTipo).HasMaxLength(50);
+            entity.Property(e => e.Rete).HasMaxLength(50);
+            entity.Property(e => e.Strada).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.Numero).HasMaxLength(20).IsRequired();
+            entity.Property(e => e.Frazione).HasMaxLength(100);
+            entity.Property(e => e.Citta).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Provincia).HasMaxLength(5).IsRequired();
+            entity.Property(e => e.Regione).HasMaxLength(100);
+            entity.Property(e => e.CAP).HasMaxLength(10);
+            entity.Property(e => e.EgonCivico).HasMaxLength(50);
+            entity.Property(e => e.EgonStrada).HasMaxLength(50);
+            entity.Property(e => e.EgonLocalita).HasMaxLength(50);
+
+            entity.HasOne(e => e.Anagrafica).WithMany(a => a.Indirizzi).HasForeignKey(e => e.AnagraficaId);
         });
 
         builder.Entity<Contatto>(entity =>

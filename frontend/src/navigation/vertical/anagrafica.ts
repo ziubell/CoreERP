@@ -11,6 +11,10 @@ export default [
         title: 'Contatti',
         to: 'contatti',
       },
+      {
+        title: 'Indirizzi',
+        to: 'indirizzi',
+      },
     ],
   },
 ]

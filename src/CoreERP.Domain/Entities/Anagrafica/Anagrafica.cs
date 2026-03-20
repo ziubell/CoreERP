@@ -49,4 +49,5 @@ public class Anagrafica : SoftDeletableEntity
     public MotivoDisattivazione? MotivoDisattivazione { get; set; }
     public MetodoPagamento? MetodoPagamento { get; set; }
     public ICollection<AnagraficaContatto> AnagraficaContatti { get; set; } = new List<AnagraficaContatto>();
+    public ICollection<Indirizzo> Indirizzi { get; set; } = new List<Indirizzo>();
 }

@@ -80,6 +80,10 @@ public static class DependencyInjection
         services.AddScoped<IStoricoModificaRepository, StoricoModificaRepository>();
         services.AddScoped<IAnagraficaService, AnagraficaService>();
 
+        // Indirizzo & EGON Services
+        services.AddScoped<IIndirizzoRepository, IndirizzoRepository>();
+        services.AddScoped<IEgonService, EgonService>();
+
         return services;
     }
 }
