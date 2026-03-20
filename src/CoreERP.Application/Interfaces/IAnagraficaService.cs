@@ -28,7 +28,7 @@ public interface IAnagraficaService
 
     // Contatti standalone
     Task<(List<ContattoListItemDto> Items, int TotalCount)> GetContattiAsync(
-        string? ricerca = null, int pagina = 1, int dimensionePagina = 20);
+        string? ricerca = null, int pagina = 1, int dimensionePagina = 20, int? excludeAnagraficaId = null);
     Task<ContattoDto?> GetContattoAsync(int id);
     Task<ContattoDto> CreateContattoAsync(CreateContattoRequest request, string userId);
     Task<ContattoDto> UpdateContattoAsync(int id, UpdateContattoRequest request, string userId);

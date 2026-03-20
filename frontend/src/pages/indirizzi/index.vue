@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { useIndirizziStore } from '@/stores/indirizzi'
-import { TIPI_INDIRIZZO } from '@/types/indirizzo'
 
 definePage({
   meta: {
@@ -58,8 +57,8 @@ const totalPages = computed(() => Math.ceil(store.totalCount / dimensionePagina.
           <VCol cols="12" sm="4" md="3">
             <AppSelect
               v-model="tipoFiltro"
-              :items="[{ title: 'Tutti', value: undefined }, ...[...TIPI_INDIRIZZO].map(t => ({ title: t, value: t }))]"
-              label="Tipo"
+              :items="[{ title: 'Tutti', value: undefined }, { title: 'Fatturazione', value: 'Fatturazione' }, { title: 'Impianto', value: 'Impianto' }]"
+              placeholder="Filtra per tipo..."
               clearable
             />
           </VCol>
@@ -70,12 +69,11 @@ const totalPages = computed(() => Math.ceil(store.totalCount / dimensionePagina.
         <thead>
           <tr>
             <th>Anagrafica</th>
-            <th>Tipo</th>
+            <th>Uso</th>
             <th>Indirizzo</th>
             <th>Città</th>
             <th>Prov.</th>
             <th>Rete</th>
-            <th class="text-center">Principale</th>
           </tr>
         </thead>
         <tbody>
@@ -98,8 +96,11 @@ const totalPages = computed(() => Math.ceil(store.totalCount / dimensionePagina.
           >
             <td>{{ item.anagraficaDenominazione }}</td>
             <td>
-              <VChip size="small" :color="item.tipo === 'Impianto' ? 'info' : 'warning'" variant="tonal">
-                {{ item.tipo }}
+              <VChip v-if="item.isFatturazione" size="small" color="warning" variant="tonal">
+                Fatt.
+              </VChip>
+              <VChip v-if="item.isImpianto" size="small" color="info" variant="tonal" :class="item.isFatturazione ? 'ms-1' : ''">
+                Imp.
               </VChip>
               <VChip v-if="item.sottoTipo" size="small" class="ms-1" variant="tonal">
                 {{ item.sottoTipo }}
@@ -108,10 +109,7 @@ const totalPages = computed(() => Math.ceil(store.totalCount / dimensionePagina.
             <td>{{ item.indirizzoCompleto }}</td>
             <td>{{ item.citta }}</td>
             <td>{{ item.provincia }}</td>
-            <td>{{ item.rete ?? '-' }}</td>
-            <td class="text-center">
-              <VIcon v-if="item.principale" icon="tabler-check" color="success" size="20" />
-            </td>
+            <td>{{ item.rete ?? '—' }}</td>
           </tr>
         </tbody>
       </VTable>

@@ -13,7 +13,7 @@ public class ContattoRepository : IContattoRepository
         _context = context;
     }
 
-    public async Task<List<Contatto>> GetListAsync(string? ricerca = null, int pagina = 1, int dimensionePagina = 20)
+    public async Task<List<Contatto>> GetListAsync(string? ricerca = null, int pagina = 1, int dimensionePagina = 20, int? excludeAnagraficaId = null)
     {
         var query = _context.Contatti.AsQueryable();
 
@@ -27,6 +27,14 @@ public class ContattoRepository : IContattoRepository
                 (c.Cellulare != null && c.Cellulare.Contains(term)));
         }
 
+        if (excludeAnagraficaId.HasValue)
+        {
+            var associatedIds = _context.AnagraficaContatti
+                .Where(ac => ac.AnagraficaId == excludeAnagraficaId.Value)
+                .Select(ac => ac.ContattoId);
+            query = query.Where(c => !associatedIds.Contains(c.Id));
+        }
+
         return await query
             .OrderByDescending(c => c.DataCreazione)
             .Skip((pagina - 1) * dimensionePagina)
@@ -34,7 +42,7 @@ public class ContattoRepository : IContattoRepository
             .ToListAsync();
     }
 
-    public async Task<int> CountAsync(string? ricerca = null)
+    public async Task<int> CountAsync(string? ricerca = null, int? excludeAnagraficaId = null)
     {
         var query = _context.Contatti.AsQueryable();
 
@@ -46,6 +54,14 @@ public class ContattoRepository : IContattoRepository
                 c.Cognome.Contains(term) ||
                 (c.Email != null && c.Email.Contains(term)) ||
                 (c.Cellulare != null && c.Cellulare.Contains(term)));
+        }
+
+        if (excludeAnagraficaId.HasValue)
+        {
+            var associatedIds = _context.AnagraficaContatti
+                .Where(ac => ac.AnagraficaId == excludeAnagraficaId.Value)
+                .Select(ac => ac.ContattoId);
+            query = query.Where(c => !associatedIds.Contains(c.Id));
         }
 
         return await query.CountAsync();

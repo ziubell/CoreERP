@@ -20,6 +20,11 @@ export const $api = ofetch.create({
     if (response.status === 401) {
       useCookie('accessToken').value = null
       useCookie('userData').value = null
+
+      // Redirect al login se non siamo già sulla pagina login
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login'
+      }
     }
   },
 })

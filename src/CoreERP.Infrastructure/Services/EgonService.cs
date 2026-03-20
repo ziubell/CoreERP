@@ -57,7 +57,7 @@ public class EgonService : IEgonService
 
             var results = await response.Content.ReadFromJsonAsync<List<EgonSearchResult>>();
             return results?.Select(r => new EgonStradaDto(
-                r.StreetEgon ?? "",
+                r.StreetEgon?.ToString() ?? "",
                 r.Street ?? "",
                 r.City ?? "",
                 r.Province ?? "",
@@ -81,7 +81,7 @@ public class EgonService : IEgonService
 
             var results = await response.Content.ReadFromJsonAsync<List<EgonSearchResult>>();
             return results?.Select(r => new EgonCivicoDto(
-                r.CivicEgon ?? "", r.Civic ?? "")).ToList() ?? [];
+                r.CivicEgon?.ToString() ?? "", r.Civic ?? "")).ToList() ?? [];
         }
         catch (Exception ex)
         {
@@ -89,6 +89,59 @@ public class EgonService : IEgonService
             return [];
         }
     }
+
+    public async Task<EgonNormalizzazioneDto?> NormalizeAsync(string city, string street, string? fraction = null)
+    {
+        try
+        {
+            var url = $"/normalization?city={Uri.EscapeDataString(city)}&street={Uri.EscapeDataString(street)}";
+            if (!string.IsNullOrEmpty(fraction) && fraction.Length > 1)
+                url += $"&fraction={Uri.EscapeDataString(fraction)}";
+
+            var response = await _httpClient.GetAsync(url);
+            response.EnsureSuccessStatusCode();
+
+            var result = await response.Content.ReadFromJsonAsync<EgonNormalizationResult>();
+            if (result == null) return null;
+
+            return new EgonNormalizzazioneDto(
+                result.Address, result.Zip, result.Section, result.City,
+                result.ProvinceShort, result.Latitude, result.Longitude, result.EgonId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Errore normalizzazione EGON: {City} {Street}", city, street);
+            return null;
+        }
+    }
+}
+
+// Internal model for EGON normalization response
+internal class EgonNormalizationResult
+{
+    [JsonPropertyName("address")]
+    public string? Address { get; set; }
+
+    [JsonPropertyName("zip")]
+    public string? Zip { get; set; }
+
+    [JsonPropertyName("section")]
+    public string? Section { get; set; }
+
+    [JsonPropertyName("city")]
+    public string? City { get; set; }
+
+    [JsonPropertyName("province_short")]
+    public string? ProvinceShort { get; set; }
+
+    [JsonPropertyName("latitude")]
+    public double? Latitude { get; set; }
+
+    [JsonPropertyName("longitude")]
+    public double? Longitude { get; set; }
+
+    [JsonPropertyName("egon_id")]
+    public long? EgonId { get; set; }
 }
 
 // Internal model for EGON API response deserialization
@@ -101,13 +154,13 @@ internal class EgonSearchResult
     public string? City { get; set; }
 
     [JsonPropertyName("street_egon")]
-    public string? StreetEgon { get; set; }
+    public long? StreetEgon { get; set; }
 
     [JsonPropertyName("street")]
     public string? Street { get; set; }
 
     [JsonPropertyName("civic_egon")]
-    public string? CivicEgon { get; set; }
+    public long? CivicEgon { get; set; }
 
     [JsonPropertyName("civic")]
     public string? Civic { get; set; }

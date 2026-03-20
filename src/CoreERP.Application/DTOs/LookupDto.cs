@@ -21,3 +21,7 @@ public record RuoloContattoDto(
     string? Descrizione,
     bool Attivo,
     int Ordine);
+
+public record TipoTecnologiaDto(int Id, string Nome, string? Descrizione, bool Attivo, int Ordine);
+
+public record ReteRiferimentoDto(int Id, string Nome, string? Descrizione, bool Attivo, int Ordine);

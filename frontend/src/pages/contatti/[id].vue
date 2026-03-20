@@ -2,6 +2,8 @@
 import { useContattiStore } from '@/stores/contatti'
 import { useNotificheStore } from '@/stores/notifiche'
 
+definePage({ meta: { navActiveLink: 'contatti' } })
+
 const route = useRoute()
 const router = useRouter()
 const store = useContattiStore()

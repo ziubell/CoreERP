@@ -596,12 +596,11 @@ const backRoute = computed(() => isEditMode.value ? `/anagrafiche/${props.id}` :
               <VTable v-if="indirizziList.length > 0" class="text-no-wrap mb-4 border rounded">
                 <thead>
                   <tr>
-                    <th>Tipo</th>
+                    <th>Uso</th>
                     <th>Indirizzo</th>
                     <th>Città</th>
                     <th>Prov.</th>
                     <th>Rete</th>
-                    <th class="text-center" style="width: 100px;">Principale</th>
                     <th class="text-center" style="width: 80px;">Azioni</th>
                   </tr>
                 </thead>
@@ -613,20 +612,17 @@ const backRoute = computed(() => isEditMode.value ? `/anagrafiche/${props.id}` :
                     @click="openEditIndirizzo(ind)"
                   >
                     <td>
-                      <VChip size="small" :color="ind.tipo === 'Impianto' ? 'info' : 'warning'" variant="tonal">
-                        {{ ind.tipo }}
+                      <VChip v-if="ind.isFatturazione" size="small" color="warning" variant="tonal">
+                        Fatt.
                       </VChip>
-                      <VChip v-if="ind.sottoTipo" size="small" class="ms-1" variant="tonal">
-                        {{ ind.sottoTipo }}
+                      <VChip v-if="ind.isImpianto" size="small" color="info" variant="tonal" :class="ind.isFatturazione ? 'ms-1' : ''">
+                        Imp.
                       </VChip>
                     </td>
                     <td>{{ ind.strada }} {{ ind.numero }}</td>
                     <td>{{ ind.citta }}</td>
                     <td>{{ ind.provincia }}</td>
                     <td>{{ ind.rete ?? '—' }}</td>
-                    <td class="text-center">
-                      <VIcon v-if="ind.principale" icon="tabler-check" color="primary" size="20" />
-                    </td>
                     <td class="text-center">
                       <IconBtn size="small" color="error" @click.stop="removeIndirizzo(ind.id)">
                         <VIcon icon="tabler-trash" size="18" />

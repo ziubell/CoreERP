@@ -1,10 +1,15 @@
 <script setup lang="ts">
 import { useAnagraficheStore } from '@/stores/anagrafiche'
 import { TIPO_ANAGRAFICA_LABELS, TIPO_SOGGETTO_LABELS, PERIODICITA_LABELS } from '@/types/anagrafica'
+
+definePage({ meta: { navActiveLink: 'anagrafiche' } })
 import type { AnagraficaContattoApi, PeriodicitaPagamento } from '@/types/anagrafica'
 import AnagraficaTimeline from '@/components/anagrafica/AnagraficaTimeline.vue'
 import ContattoDialog from '@/components/anagrafica/ContattoDialog.vue'
 import type { ContattoDialogData } from '@/components/anagrafica/ContattoDialog.vue'
+import IndirizzoDialog from '@/components/anagrafica/IndirizzoDialog.vue'
+import { useIndirizziStore } from '@/stores/indirizzi'
+import type { IndirizzoApi } from '@/types/indirizzo'
 import { useNotificheStore } from '@/stores/notifiche'
 import { requiredValidator } from '@/@core/utils/validators'
 
@@ -12,8 +17,72 @@ const route = useRoute()
 const router = useRouter()
 const store = useAnagraficheStore()
 
+const indirizziStore = useIndirizziStore()
 const id = computed(() => Number(route.params.id))
 const anagrafica = computed(() => store.current)
+
+// Indirizzi
+const indirizziList = ref<IndirizzoApi[]>([])
+const indirizzoDialogOpen = ref(false)
+const editingIndirizzo = ref<IndirizzoApi | null>(null)
+
+function openAddIndirizzo() {
+  editingIndirizzo.value = null
+  indirizzoDialogOpen.value = true
+}
+
+function openEditIndirizzo(indirizzo: IndirizzoApi) {
+  editingIndirizzo.value = indirizzo
+  indirizzoDialogOpen.value = true
+}
+
+async function onIndirizzoSaved() {
+  indirizziList.value = await indirizziStore.fetchByAnagrafica(id.value)
+}
+
+// Conferma rimozione (contatti e indirizzi)
+const removeDialogOpen = ref(false)
+const removeDialogType = ref<'contatto' | 'indirizzo'>('contatto')
+const removeDialogId = ref<number>(0)
+const removeDialogName = ref('')
+const removeLoading = ref(false)
+
+function askRemoveContatto(contattoId: number, nome: string) {
+  removeDialogType.value = 'contatto'
+  removeDialogId.value = contattoId
+  removeDialogName.value = nome
+  removeDialogOpen.value = true
+}
+
+function askRemoveIndirizzo(indirizzoId: number, label: string) {
+  removeDialogType.value = 'indirizzo'
+  removeDialogId.value = indirizzoId
+  removeDialogName.value = label
+  removeDialogOpen.value = true
+}
+
+async function confirmRemoveAssociation() {
+  removeLoading.value = true
+  try {
+    if (removeDialogType.value === 'contatto') {
+      await store.rimuoviContatto(id.value, removeDialogId.value)
+      await store.fetchById(id.value)
+      notificheStore.addToast('Contatto rimosso dall\'anagrafica', null, null, 'success')
+    }
+    else {
+      await indirizziStore.remove(removeDialogId.value)
+      indirizziList.value = indirizziList.value.filter(i => i.id !== removeDialogId.value)
+      notificheStore.addToast('Indirizzo eliminato', null, null, 'success')
+    }
+    removeDialogOpen.value = false
+  }
+  catch (error: any) {
+    notificheStore.addToast('Errore durante la rimozione', error?.data?.message || null, null, 'error')
+  }
+  finally {
+    removeLoading.value = false
+  }
+}
 
 // Delete dialog
 const deleteDialogOpen = ref(false)
@@ -27,6 +96,11 @@ const disattivaLoading = ref(false)
 // Contact edit dialog
 const contattoDialogOpen = ref(false)
 const contattoDialogData = ref<ContattoDialogData | null>(null)
+
+function openContattoAdd() {
+  contattoDialogData.value = null
+  contattoDialogOpen.value = true
+}
 
 function openContattoEdit(contatto: AnagraficaContattoApi) {
   contattoDialogData.value = {
@@ -49,20 +123,52 @@ const notificheStore = useNotificheStore()
 
 async function handleContattoSave(data: ContattoDialogData) {
   try {
-    await store.aggiornaRuoloContatto(id.value, data.contattoId!, {
-      ruoloContattoId: data.ruoloContattoId!,
-      principale: data.principale,
-    })
+    const isEditing = contattoDialogData.value !== null
+
+    if (isEditing && data.contattoId) {
+      // Modifica ruolo/principale di un contatto già associato
+      await store.aggiornaRuoloContatto(id.value, data.contattoId, {
+        ruoloContattoId: data.ruoloContattoId!,
+        principale: data.principale,
+      })
+      notificheStore.addToast('Contatto aggiornato con successo', null, null, 'success')
+    }
+    else if (data.isExisting && data.contattoId) {
+      // Associa contatto esistente
+      await store.associaContatto(id.value, {
+        contattoId: data.contattoId,
+        ruoloContattoId: data.ruoloContattoId,
+        principale: data.principale,
+      })
+      notificheStore.addToast('Contatto associato con successo', null, null, 'success')
+    }
+    else {
+      // Crea nuovo contatto e associa
+      await store.associaContatto(id.value, {
+        ruoloContattoId: data.ruoloContattoId,
+        principale: data.principale,
+        nuovoContatto: {
+          nome: data.nome,
+          cognome: data.cognome,
+          email: data.email || undefined,
+          cellulare: data.cellulare || undefined,
+        },
+      })
+      notificheStore.addToast('Contatto aggiunto con successo', null, null, 'success')
+    }
     await store.fetchById(id.value)
-    notificheStore.addToast('Contatto aggiornato con successo', null, null, 'success')
   }
   catch (error: any) {
-    notificheStore.addToast('Errore aggiornamento contatto', error?.data?.message || error?.message || null, null, 'error')
+    notificheStore.addToast('Errore salvataggio contatto', error?.data?.message || error?.message || null, null, 'error')
   }
 }
 
 onMounted(async () => {
-  await Promise.all([store.fetchById(id.value), store.fetchLookups()])
+  await Promise.all([
+    store.fetchById(id.value),
+    store.fetchLookups(),
+    indirizziStore.fetchByAnagrafica(id.value).then(r => { indirizziList.value = r }),
+  ])
 })
 
 function handleDisattiva() {
@@ -335,11 +441,19 @@ const fullAddress = computed(() => {
             </div>
           </VCardText>
 
-          <VDivider />
+        </VCard>
 
-          <!-- Contatti -->
+        <!-- Contatti Card -->
+        <VCard class="mt-4">
+          <VCardItem>
+            <VCardTitle>Contatti</VCardTitle>
+            <template #append>
+              <VBtn size="small" variant="tonal" prepend-icon="tabler-plus" @click="openContattoAdd">
+                Aggiungi
+              </VBtn>
+            </template>
+          </VCardItem>
           <VCardText>
-            <h6 class="text-h6 mb-3">Contatti</h6>
             <template v-if="anagrafica.contatti && anagrafica.contatti.length > 0">
               <VList density="compact" class="pa-0">
                 <VListItem
@@ -355,6 +469,11 @@ const fullAddress = computed(() => {
                   <VListItemSubtitle v-if="contatto.email || contatto.cellulare">
                     {{ [contatto.email, contatto.cellulare].filter(Boolean).join(' | ') }}
                   </VListItemSubtitle>
+                  <template #append>
+                    <IconBtn size="small" color="error" @click.stop="askRemoveContatto(contatto.contattoId, `${contatto.nome} ${contatto.cognome}`)">
+                      <VIcon icon="tabler-trash" size="16" />
+                    </IconBtn>
+                  </template>
                 </VListItem>
               </VList>
             </template>
@@ -362,12 +481,85 @@ const fullAddress = computed(() => {
               Nessun contatto associato
             </div>
           </VCardText>
-
         </VCard>
+
+        <!-- Indirizzi Card -->
+        <VCard class="mt-4">
+          <VCardItem>
+            <VCardTitle>Indirizzi</VCardTitle>
+            <template #append>
+              <VBtn size="small" variant="tonal" prepend-icon="tabler-plus" @click="openAddIndirizzo">
+                Aggiungi
+              </VBtn>
+            </template>
+          </VCardItem>
+          <VCardText>
+            <template v-if="indirizziList.length > 0">
+              <VList density="compact" class="pa-0">
+                <VListItem
+                  v-for="ind in indirizziList"
+                  :key="ind.id"
+                  class="cursor-pointer px-0"
+                  @click="openEditIndirizzo(ind)"
+                >
+                  <VListItemTitle class="text-body-1">
+                    {{ ind.strada }} {{ ind.numero }}
+                  </VListItemTitle>
+                  <VListItemSubtitle>
+                    {{ ind.frazione ? `${ind.frazione}, ` : '' }}{{ ind.cap }} {{ ind.citta }} ({{ ind.provincia }})
+                  </VListItemSubtitle>
+                  <VListItemSubtitle class="mt-1">
+                    <VChip v-if="ind.isFatturazione" size="x-small" label color="warning">
+                      Fatturazione
+                    </VChip>
+                    <VChip v-if="ind.isImpianto" size="x-small" label color="info" :class="ind.isFatturazione ? 'ms-1' : ''">
+                      Impianto
+                    </VChip>
+                    <VChip v-if="ind.sottoTipo" size="x-small" label class="ms-1">
+                      {{ ind.sottoTipo }}
+                    </VChip>
+                    <VChip v-if="ind.rete" size="x-small" label variant="outlined" class="ms-1">
+                      {{ ind.rete }}
+                    </VChip>
+                  </VListItemSubtitle>
+                  <template #append>
+                    <IconBtn size="small" color="error" @click.stop="askRemoveIndirizzo(ind.id, `${ind.strada} ${ind.numero}, ${ind.citta}`)">
+                      <VIcon icon="tabler-trash" size="16" />
+                    </IconBtn>
+                  </template>
+                </VListItem>
+              </VList>
+            </template>
+            <div v-else class="text-disabled text-body-2">
+              Nessun indirizzo associato
+            </div>
+          </VCardText>
+        </VCard>
+
       </VCol>
 
       <!-- RIGHT COLUMN - Timeline + Opportunità -->
       <VCol cols="12" md="8" lg="8">
+        <!-- Warning indirizzi mancanti -->
+        <VAlert
+          v-if="!indirizziList.some(i => i.isImpianto)"
+          type="warning"
+          variant="tonal"
+          density="compact"
+          class="mb-4"
+        >
+          Nessun indirizzo di tipo <strong>Impianto</strong> associato
+        </VAlert>
+        <VAlert
+          v-if="anagrafica.tipo === 1 && !indirizziList.some(i => i.isFatturazione)"
+          type="warning"
+          variant="tonal"
+          density="compact"
+          class="mb-4"
+        >
+          Nessun indirizzo di tipo <strong>Fatturazione</strong> associato (obbligatorio per clienti)
+        </VAlert>
+
         <!-- Opportunità (placeholder) -->
         <VCard class="mb-4">
           <VCardItem>
@@ -388,11 +580,49 @@ const fullAddress = computed(() => {
     <VProgressCircular indeterminate />
   </div>
 
+  <!-- Conferma Rimozione Dialog -->
+  <VDialog v-model="removeDialogOpen" max-width="450" persistent>
+    <VCard title="Conferma rimozione">
+      <VCardText>
+        <p class="text-body-1 mb-2">
+          Stai per rimuovere <strong>{{ removeDialogName }}</strong>.
+        </p>
+        <p class="text-body-2 text-medium-emphasis">
+          {{ removeDialogType === 'contatto'
+            ? 'Il contatto verrà rimosso da questa anagrafica ma resterà disponibile nel sistema.'
+            : 'L\'indirizzo verrà eliminato definitivamente.' }}
+        </p>
+      </VCardText>
+      <VCardText class="d-flex justify-end gap-4">
+        <VBtn variant="tonal" @click="removeDialogOpen = false">
+          Annulla
+        </VBtn>
+        <VBtn
+          color="error"
+          prepend-icon="tabler-trash"
+          :loading="removeLoading"
+          @click="confirmRemoveAssociation"
+        >
+          {{ removeDialogType === 'contatto' ? 'Rimuovi' : 'Elimina' }}
+        </VBtn>
+      </VCardText>
+    </VCard>
+  </VDialog>
+
+  <!-- Indirizzo Dialog -->
+  <IndirizzoDialog
+    v-model="indirizzoDialogOpen"
+    :anagrafica-id="id"
+    :indirizzo="editingIndirizzo"
+    @saved="onIndirizzoSaved"
+  />
+
   <!-- Contatto Edit Dialog -->
   <ContattoDialog
     v-model="contattoDialogOpen"
     :contatto="contattoDialogData"
     :ruoli-contatto="store.ruoliContatto"
+    :anagrafica-id="id"
     @save="handleContattoSave"
   />
 

@@ -8,12 +8,17 @@ import type {
   EgonComuneApi,
   EgonStradaApi,
   EgonCivicoApi,
+  TipoTecnologiaApi,
+  ReteRiferimentoApi,
 } from '@/types/indirizzo'
 
 export const useIndirizziStore = defineStore('indirizzi', () => {
   const items = ref<IndirizzoListItemApi[]>([])
   const totalCount = ref(0)
   const loading = ref(false)
+
+  const tipiTecnologia = ref<TipoTecnologiaApi[]>([])
+  const retiRiferimento = ref<ReteRiferimentoApi[]>([])
 
   async function fetchList(params?: {
     tipo?: string
@@ -74,10 +79,30 @@ export const useIndirizziStore = defineStore('indirizzi', () => {
     return await $api(`/v1/egon/civici?egonStrada=${encodeURIComponent(egonStrada)}&q=${encodeURIComponent(q)}`)
   }
 
+  async function normalize(city: string, street: string, fraction?: string) {
+    const params = new URLSearchParams({ city, street })
+    if (fraction) params.set('fraction', fraction)
+    return await $api(`/v1/egon/normalizza?${params}`)
+  }
+
+  async function fetchTipiTecnologia() {
+    tipiTecnologia.value = await $api('/v1/tipi-tecnologia?attivo=true')
+  }
+
+  async function fetchRetiRiferimento() {
+    retiRiferimento.value = await $api('/v1/reti-riferimento?attivo=true')
+  }
+
+  async function fetchLookups() {
+    await Promise.all([fetchTipiTecnologia(), fetchRetiRiferimento()])
+  }
+
   return {
     items,
     totalCount,
     loading,
+    tipiTecnologia,
+    retiRiferimento,
     fetchList,
     fetchByAnagrafica,
     fetchById,
@@ -87,5 +112,9 @@ export const useIndirizziStore = defineStore('indirizzi', () => {
     searchComuni,
     searchStrade,
     searchCivici,
+    normalize,
+    fetchTipiTecnologia,
+    fetchRetiRiferimento,
+    fetchLookups,
   }
 })

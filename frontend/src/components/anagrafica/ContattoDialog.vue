@@ -23,6 +23,7 @@ const props = defineProps<{
   modelValue: boolean
   contatto?: ContattoDialogData | null
   ruoliContatto: RuoloContattoApi[]
+  anagraficaId?: number
 }>()
 
 const emit = defineEmits<{
@@ -101,7 +102,9 @@ function onSearchInput() {
   searchTimeout = setTimeout(async () => {
     searchLoading.value = true
     try {
-      const data = await $api(`/v1/contatti?ricerca=${encodeURIComponent(searchQuery.value)}&dimensionePagina=10`)
+      const params = new URLSearchParams({ ricerca: searchQuery.value, dimensionePagina: '10' })
+      if (props.anagraficaId) params.set('excludeAnagraficaId', String(props.anagraficaId))
+      const data = await $api(`/v1/contatti?${params}`)
       searchResults.value = data.items ?? []
     }
     catch {

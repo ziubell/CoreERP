@@ -1,7 +1,8 @@
 export interface IndirizzoApi {
   id: number
   anagraficaId: number
-  tipo: string
+  isFatturazione: boolean
+  isImpianto: boolean
   sottoTipo?: string | null
   rete?: string | null
   strada: string
@@ -16,7 +17,6 @@ export interface IndirizzoApi {
   egonCivico?: string | null
   egonStrada?: string | null
   egonLocalita?: string | null
-  principale: boolean
   anagraficaDenominazione?: string | null
   dataCreazione: string
 }
@@ -25,18 +25,19 @@ export interface IndirizzoListItemApi {
   id: number
   anagraficaId: number
   anagraficaDenominazione: string
-  tipo: string
+  isFatturazione: boolean
+  isImpianto: boolean
   sottoTipo?: string | null
   rete?: string | null
   indirizzoCompleto: string
   citta: string
   provincia: string
-  principale: boolean
 }
 
 export interface CreateIndirizzoRequest {
   anagraficaId: number
-  tipo: string
+  isFatturazione: boolean
+  isImpianto: boolean
   sottoTipo?: string | null
   rete?: string | null
   strada: string
@@ -51,11 +52,11 @@ export interface CreateIndirizzoRequest {
   egonCivico?: string | null
   egonStrada?: string | null
   egonLocalita?: string | null
-  principale: boolean
 }
 
 export interface UpdateIndirizzoRequest {
-  tipo: string
+  isFatturazione: boolean
+  isImpianto: boolean
   sottoTipo?: string | null
   rete?: string | null
   strada: string
@@ -70,7 +71,6 @@ export interface UpdateIndirizzoRequest {
   egonCivico?: string | null
   egonStrada?: string | null
   egonLocalita?: string | null
-  principale: boolean
 }
 
 // EGON autocomplete types
@@ -93,6 +93,18 @@ export interface EgonCivicoApi {
   civico: string
 }
 
-export const TIPI_INDIRIZZO = ['Fatturazione', 'Impianto'] as const
-export const SOTTO_TIPI_IMPIANTO = ['FTTH', 'FTTC', 'FWA'] as const
-export const RETI = ['FIBERCOP', 'OPENFIBER', 'SPADHAUSEN', 'EOLO'] as const
+export interface TipoTecnologiaApi {
+  id: number
+  nome: string
+  descrizione?: string | null
+  attivo: boolean
+  ordine: number
+}
+
+export interface ReteRiferimentoApi {
+  id: number
+  nome: string
+  descrizione?: string | null
+  attivo: boolean
+  ordine: number
+}

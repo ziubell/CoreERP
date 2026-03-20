@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useContattiStore } from '@/stores/contatti'
 
+definePage({ meta: { navActiveLink: 'contatti' } })
+
 const router = useRouter()
 const store = useContattiStore()
 

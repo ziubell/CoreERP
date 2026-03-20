@@ -26,6 +26,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationIdentityUser>
     public DbSet<MotivoDisattivazione> MotiviDisattivazione => Set<MotivoDisattivazione>();
     public DbSet<StoricoModifica> StoricoModifiche => Set<StoricoModifica>();
     public DbSet<Indirizzo> Indirizzi => Set<Indirizzo>();
+    public DbSet<TipoTecnologia> TipiTecnologia => Set<TipoTecnologia>();
+    public DbSet<ReteRiferimento> RetiRiferimento => Set<ReteRiferimento>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -118,9 +120,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationIdentityUser>
         builder.Entity<Indirizzo>(entity =>
         {
             entity.ToTable("Indirizzi");
-            entity.HasIndex(e => new { e.AnagraficaId, e.Tipo });
+            entity.HasIndex(e => new { e.AnagraficaId, e.IsFatturazione, e.IsImpianto });
 
-            entity.Property(e => e.Tipo).HasMaxLength(50).IsRequired();
             entity.Property(e => e.SottoTipo).HasMaxLength(50);
             entity.Property(e => e.Rete).HasMaxLength(50);
             entity.Property(e => e.Strada).HasMaxLength(200).IsRequired();
@@ -184,6 +185,22 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationIdentityUser>
         builder.Entity<MotivoDisattivazione>(entity =>
         {
             entity.ToTable("MotiviDisattivazione");
+            entity.HasIndex(e => e.Nome).IsUnique();
+            entity.Property(e => e.Nome).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Descrizione).HasMaxLength(300);
+        });
+
+        builder.Entity<TipoTecnologia>(entity =>
+        {
+            entity.ToTable("TipiTecnologia");
+            entity.HasIndex(e => e.Nome).IsUnique();
+            entity.Property(e => e.Nome).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Descrizione).HasMaxLength(300);
+        });
+
+        builder.Entity<ReteRiferimento>(entity =>
+        {
+            entity.ToTable("RetiRiferimento");
             entity.HasIndex(e => e.Nome).IsUnique();
             entity.Property(e => e.Nome).HasMaxLength(100).IsRequired();
             entity.Property(e => e.Descrizione).HasMaxLength(300);

@@ -478,10 +478,10 @@ public class AnagraficaService : IAnagraficaService
     // === Contatti standalone ===
 
     public async Task<(List<ContattoListItemDto> Items, int TotalCount)> GetContattiAsync(
-        string? ricerca = null, int pagina = 1, int dimensionePagina = 20)
+        string? ricerca = null, int pagina = 1, int dimensionePagina = 20, int? excludeAnagraficaId = null)
     {
-        var items = await _contattoRepo.GetListAsync(ricerca, pagina, dimensionePagina);
-        var count = await _contattoRepo.CountAsync(ricerca);
+        var items = await _contattoRepo.GetListAsync(ricerca, pagina, dimensionePagina, excludeAnagraficaId);
+        var count = await _contattoRepo.CountAsync(ricerca, excludeAnagraficaId);
 
         var dtos = items.Select(c => new ContattoListItemDto(
             c.Id, c.Nome, c.Cognome, c.Email, c.Cellulare, c.Telefono, c.DataCreazione)).ToList();

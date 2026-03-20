@@ -26,9 +26,10 @@ public class ContattiController : ControllerBase
     public async Task<IActionResult> GetContatti(
         [FromQuery] string? ricerca = null,
         [FromQuery] int pagina = 1,
-        [FromQuery] int dimensionePagina = 20)
+        [FromQuery] int dimensionePagina = 20,
+        [FromQuery] int? excludeAnagraficaId = null)
     {
-        var (items, totalCount) = await _service.GetContattiAsync(ricerca, pagina, dimensionePagina);
+        var (items, totalCount) = await _service.GetContattiAsync(ricerca, pagina, dimensionePagina, excludeAnagraficaId);
         return Ok(new { items, totalCount, pagina, dimensionePagina });
     }
 

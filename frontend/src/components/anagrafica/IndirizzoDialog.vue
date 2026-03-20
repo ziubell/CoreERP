@@ -2,8 +2,6 @@
 import { useIndirizziStore } from '@/stores/indirizzi'
 import { useNotificheStore } from '@/stores/notifiche'
 import type { IndirizzoApi, EgonComuneApi, EgonStradaApi, EgonCivicoApi } from '@/types/indirizzo'
-import { TIPI_INDIRIZZO, SOTTO_TIPI_IMPIANTO, RETI } from '@/types/indirizzo'
-import { formatNome } from '@/utils/formatters'
 
 const props = defineProps<{
   modelValue: boolean
@@ -23,8 +21,13 @@ const saving = ref(false)
 const isEdit = computed(() => !!props.indirizzo?.id)
 const dialogTitle = computed(() => isEdit.value ? 'Modifica Indirizzo' : 'Nuovo Indirizzo')
 
+// Field refs for auto-focus
+const stradaFieldRef = ref<any>(null)
+const civicoFieldRef = ref<any>(null)
+
 const form = ref({
-  tipo: 'Fatturazione',
+  isFatturazione: true,
+  isImpianto: false,
   sottoTipo: null as string | null,
   rete: null as string | null,
   citta: '',
@@ -37,16 +40,20 @@ const form = ref({
   egonComune: '',
   egonStrada: '',
   egonCivico: '',
+  egonLocalita: '',
   latitudine: null as number | null,
   longitudine: null as number | null,
-  egonLocalita: '',
-  principale: false,
 })
 
 // Autocomplete state
+const comuneSearch = ref('')
+const stradaSearch = ref('')
+const civicoSearch = ref('')
+
 const comuniResults = ref<EgonComuneApi[]>([])
 const stradeResults = ref<EgonStradaApi[]>([])
 const civiciResults = ref<EgonCivicoApi[]>([])
+
 const searchingComuni = ref(false)
 const searchingStrade = ref(false)
 const searchingCivici = ref(false)
@@ -55,13 +62,41 @@ const comuneSelected = ref(false)
 const stradaSelected = ref(false)
 const civicoSelected = ref(false)
 
-const showSottoTipo = computed(() => form.value.tipo === 'Impianto')
+// Keyboard navigation
+const comuneHighlight = ref(-1)
+const stradaHighlight = ref(-1)
+const civicoHighlight = ref(-1)
 
-// Watch for edit mode — populate form
+function onComuneKeydown(e: KeyboardEvent) {
+  if (!comuniResults.value.length) return
+  if (e.key === 'ArrowDown') { e.preventDefault(); comuneHighlight.value = Math.min(comuneHighlight.value + 1, comuniResults.value.length - 1) }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); comuneHighlight.value = Math.max(comuneHighlight.value - 1, 0) }
+  else if (e.key === 'Enter' && comuneHighlight.value >= 0) { e.preventDefault(); selectComune(comuniResults.value[comuneHighlight.value]) }
+}
+
+function onStradaKeydown(e: KeyboardEvent) {
+  if (!stradeResults.value.length) return
+  if (e.key === 'ArrowDown') { e.preventDefault(); stradaHighlight.value = Math.min(stradaHighlight.value + 1, stradeResults.value.length - 1) }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); stradaHighlight.value = Math.max(stradaHighlight.value - 1, 0) }
+  else if (e.key === 'Enter' && stradaHighlight.value >= 0) { e.preventDefault(); selectStrada(stradeResults.value[stradaHighlight.value]) }
+}
+
+function onCivicoKeydown(e: KeyboardEvent) {
+  if (!civiciResults.value.length) return
+  if (e.key === 'ArrowDown') { e.preventDefault(); civicoHighlight.value = Math.min(civicoHighlight.value + 1, civiciResults.value.length - 1) }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); civicoHighlight.value = Math.max(civicoHighlight.value - 1, 0) }
+  else if (e.key === 'Enter' && civicoHighlight.value >= 0) { e.preventDefault(); selectCivico(civiciResults.value[civicoHighlight.value]) }
+}
+
+// Watch dialog open
 watch(() => props.modelValue, (val) => {
+  if (val) {
+    store.fetchLookups()
+  }
   if (val && props.indirizzo) {
     form.value = {
-      tipo: props.indirizzo.tipo,
+      isFatturazione: props.indirizzo.isFatturazione,
+      isImpianto: props.indirizzo.isImpianto,
       sottoTipo: props.indirizzo.sottoTipo ?? null,
       rete: props.indirizzo.rete ?? null,
       citta: props.indirizzo.citta,
@@ -74,11 +109,13 @@ watch(() => props.modelValue, (val) => {
       egonComune: props.indirizzo.egonLocalita ?? '',
       egonStrada: props.indirizzo.egonStrada ?? '',
       egonCivico: props.indirizzo.egonCivico ?? '',
+      egonLocalita: props.indirizzo.egonLocalita ?? '',
       latitudine: props.indirizzo.latitudine ?? null,
       longitudine: props.indirizzo.longitudine ?? null,
-      egonLocalita: props.indirizzo.egonLocalita ?? '',
-      principale: props.indirizzo.principale,
     }
+    comuneSearch.value = props.indirizzo.citta
+    stradaSearch.value = props.indirizzo.strada
+    civicoSearch.value = props.indirizzo.numero
     comuneSelected.value = true
     stradaSelected.value = true
     civicoSelected.value = !!props.indirizzo.egonCivico
@@ -90,13 +127,15 @@ watch(() => props.modelValue, (val) => {
 
 function resetForm() {
   form.value = {
-    tipo: 'Fatturazione', sottoTipo: null, rete: null,
+    isFatturazione: true, isImpianto: false, sottoTipo: null, rete: null,
     citta: '', strada: '', numero: '', frazione: '',
     provincia: '', regione: '', cap: '',
-    egonComune: '', egonStrada: '', egonCivico: '',
-    latitudine: null, longitudine: null, egonLocalita: '',
-    principale: false,
+    egonComune: '', egonStrada: '', egonCivico: '', egonLocalita: '',
+    latitudine: null, longitudine: null,
   }
+  comuneSearch.value = ''
+  stradaSearch.value = ''
+  civicoSearch.value = ''
   comuneSelected.value = false
   stradaSelected.value = false
   civicoSelected.value = false
@@ -105,40 +144,59 @@ function resetForm() {
   civiciResults.value = []
 }
 
+// I campi indirizzo sono readonly in modifica (già salvati con EGON)
+const addressFieldsLocked = computed(() => isEdit.value)
+
 // EGON: Comune search
 let comuneTimeout: ReturnType<typeof setTimeout>
-function onComuneInput(val: string) {
+function onComuneInput() {
+  const val = comuneSearch.value
   comuneSelected.value = false
   stradaSelected.value = false
   civicoSelected.value = false
   form.value.egonComune = ''
+  form.value.citta = ''
+  stradaSearch.value = ''
+  civicoSearch.value = ''
   form.value.strada = ''
   form.value.numero = ''
   form.value.egonStrada = ''
   form.value.egonCivico = ''
+  form.value.provincia = ''
+  form.value.cap = ''
+  form.value.frazione = ''
   clearTimeout(comuneTimeout)
   if (val.length < 3) { comuniResults.value = []; return }
   comuneTimeout = setTimeout(async () => {
     searchingComuni.value = true
     comuniResults.value = await store.searchComuni(val)
+    comuneHighlight.value = -1
     searchingComuni.value = false
   }, 300)
 }
 
 function selectComune(item: EgonComuneApi) {
+  comuneSearch.value = item.comune
   form.value.citta = item.comune
   form.value.egonComune = item.egonComune
   form.value.egonLocalita = item.egonComune
   comuneSelected.value = true
   comuniResults.value = []
+  nextTick(() => {
+    const el = stradaFieldRef.value?.$el?.querySelector('input') ?? stradaFieldRef.value?.$el
+    el?.focus()
+  })
 }
 
 // EGON: Strada search
 let stradaTimeout: ReturnType<typeof setTimeout>
-function onStradaInput(val: string) {
+function onStradaInput() {
+  const val = stradaSearch.value
   stradaSelected.value = false
   civicoSelected.value = false
   form.value.egonStrada = ''
+  form.value.strada = ''
+  civicoSearch.value = ''
   form.value.numero = ''
   form.value.egonCivico = ''
   clearTimeout(stradaTimeout)
@@ -146,11 +204,13 @@ function onStradaInput(val: string) {
   stradaTimeout = setTimeout(async () => {
     searchingStrade.value = true
     stradeResults.value = await store.searchStrade(form.value.egonComune, val)
+    stradaHighlight.value = -1
     searchingStrade.value = false
   }, 300)
 }
 
 function selectStrada(item: EgonStradaApi) {
+  stradaSearch.value = item.strada
   form.value.strada = item.strada
   form.value.egonStrada = item.egonStrada
   form.value.provincia = item.provincia
@@ -158,31 +218,54 @@ function selectStrada(item: EgonStradaApi) {
   form.value.frazione = item.frazione ?? ''
   stradaSelected.value = true
   stradeResults.value = []
+  nextTick(() => {
+    const el = civicoFieldRef.value?.$el?.querySelector('input') ?? civicoFieldRef.value?.$el
+    el?.focus()
+  })
 }
 
 // EGON: Civico search
 let civicoTimeout: ReturnType<typeof setTimeout>
-function onCivicoInput(val: string) {
+function onCivicoInput() {
+  const val = civicoSearch.value
   civicoSelected.value = false
   form.value.egonCivico = ''
+  form.value.numero = ''
   clearTimeout(civicoTimeout)
   if (!val || !form.value.egonStrada) { civiciResults.value = []; return }
   civicoTimeout = setTimeout(async () => {
     searchingCivici.value = true
     civiciResults.value = await store.searchCivici(form.value.egonStrada, val)
+    civicoHighlight.value = -1
     searchingCivici.value = false
   }, 300)
 }
 
-function selectCivico(item: EgonCivicoApi) {
+async function selectCivico(item: EgonCivicoApi) {
+  civicoSearch.value = item.civico
   form.value.numero = item.civico
   form.value.egonCivico = item.egonCivico
   civicoSelected.value = true
   civiciResults.value = []
+
+  // Normalizza per ottenere CAP, lat, lng, provincia
+  try {
+    const norm = await store.normalize(form.value.citta, `${form.value.strada}, ${item.civico}`, form.value.frazione || undefined)
+    if (norm) {
+      form.value.cap = norm.zip ?? form.value.cap
+      form.value.provincia = norm.provinceShort ?? form.value.provincia
+      form.value.latitudine = norm.latitude ?? null
+      form.value.longitudine = norm.longitude ?? null
+      if (norm.egonId) form.value.egonCivico = String(norm.egonId)
+    }
+  }
+  catch {
+    // keep values from street selection
+  }
 }
 
 const canSave = computed(() =>
-  form.value.tipo
+  (form.value.isFatturazione || form.value.isImpianto)
   && form.value.citta
   && form.value.strada
   && form.value.numero
@@ -195,13 +278,14 @@ async function save() {
   saving.value = true
   try {
     const payload = {
-      tipo: form.value.tipo,
-      sottoTipo: showSottoTipo.value ? form.value.sottoTipo : null,
-      rete: showSottoTipo.value ? form.value.rete : null,
+      isFatturazione: form.value.isFatturazione,
+      isImpianto: form.value.isImpianto,
+      sottoTipo: form.value.isImpianto ? form.value.sottoTipo : null,
+      rete: form.value.isImpianto ? form.value.rete : null,
       strada: form.value.strada,
       numero: form.value.numero,
       frazione: form.value.frazione || null,
-      citta: formatNome(form.value.citta),
+      citta: form.value.citta,
       provincia: form.value.provincia.toUpperCase(),
       regione: form.value.regione || null,
       cap: form.value.cap || null,
@@ -210,7 +294,6 @@ async function save() {
       egonCivico: form.value.egonCivico || null,
       egonStrada: form.value.egonStrada || null,
       egonLocalita: form.value.egonLocalita || null,
-      principale: form.value.principale,
     }
 
     if (isEdit.value && props.indirizzo) {
@@ -244,144 +327,149 @@ async function save() {
       <VCardTitle>{{ dialogTitle }}</VCardTitle>
 
       <VCardText>
-        <!-- Tipo -->
+        <!-- Comune -->
+        <VRow>
+          <VCol cols="12" class="egon-field">
+            <AppTextField
+              v-model="comuneSearch"
+              label="Comune"
+              :loading="searchingComuni"
+              :disabled="addressFieldsLocked"
+              placeholder="Digita almeno 3 caratteri..."
+              @input="onComuneInput"
+              @keydown="onComuneKeydown"
+            />
+            <div v-if="comuniResults.length > 0" class="egon-results">
+              <div
+                v-for="(item, i) in comuniResults"
+                :key="item.egonComune"
+                class="egon-result-item"
+                :class="{ 'egon-result-highlighted': i === comuneHighlight }"
+                @mousedown.prevent.stop="selectComune(item)"
+              >
+                {{ item.comune }}
+              </div>
+            </div>
+          </VCol>
+        </VRow>
+
+        <!-- Strada + Civico -->
+        <VRow>
+          <VCol cols="12" sm="8" class="egon-field">
+            <AppTextField
+              ref="stradaFieldRef"
+              v-model="stradaSearch"
+              label="Strada"
+              :loading="searchingStrade"
+              :disabled="!comuneSelected || addressFieldsLocked"
+              placeholder="Digita almeno 3 caratteri..."
+              @input="onStradaInput"
+              @keydown="onStradaKeydown"
+            />
+            <div v-if="stradeResults.length > 0" class="egon-results">
+              <div
+                v-for="(item, i) in stradeResults"
+                :key="item.egonStrada"
+                class="egon-result-item"
+                :class="{ 'egon-result-highlighted': i === stradaHighlight }"
+                @mousedown.prevent.stop="selectStrada(item)"
+              >
+                {{ item.strada }}
+                <span v-if="item.frazione" class="text-disabled"> — {{ item.frazione }}</span>
+              </div>
+            </div>
+          </VCol>
+          <VCol cols="12" sm="4" class="egon-field">
+            <AppTextField
+              ref="civicoFieldRef"
+              v-model="civicoSearch"
+              label="Civico"
+              :loading="searchingCivici"
+              :disabled="!stradaSelected || addressFieldsLocked"
+              @input="onCivicoInput"
+              @keydown="onCivicoKeydown"
+            />
+            <div v-if="civiciResults.length > 0" class="egon-results">
+              <div
+                v-for="(item, i) in civiciResults"
+                :key="item.egonCivico"
+                class="egon-result-item"
+                :class="{ 'egon-result-highlighted': i === civicoHighlight }"
+                @mousedown.prevent.stop="selectCivico(item)"
+              >
+                {{ item.civico }}
+              </div>
+            </div>
+          </VCol>
+        </VRow>
+
+        <!-- Dettagli compilati automaticamente (readonly) -->
         <VRow>
           <VCol cols="12" sm="4">
-            <AppSelect
-              v-model="form.tipo"
-              :items="[...TIPI_INDIRIZZO]"
-              label="Tipo"
-              :rules="[v => !!v || 'Obbligatorio']"
-            />
+            <AppTextField v-model="form.frazione" label="Frazione" disabled />
           </VCol>
-          <VCol v-if="showSottoTipo" cols="12" sm="4">
+          <VCol cols="12" sm="4">
+            <AppTextField v-model="form.provincia" label="Provincia" disabled />
+          </VCol>
+          <VCol cols="12" sm="4">
+            <AppTextField v-model="form.cap" label="CAP" disabled />
+          </VCol>
+        </VRow>
+
+        <!-- EGON info -->
+        <VRow v-if="form.egonCivico">
+          <VCol cols="12">
+            <VAlert type="success" variant="tonal" density="compact">
+              EGON Civico: <strong>{{ form.egonCivico }}</strong>
+              <template v-if="form.latitudine">
+                · Lat: {{ form.latitudine?.toFixed(6) }}, Lng: {{ form.longitudine?.toFixed(6) }}
+              </template>
+            </VAlert>
+          </VCol>
+        </VRow>
+
+        <VDivider class="my-4" />
+
+        <!-- Uso indirizzo (checkbox) -->
+        <VRow>
+          <VCol cols="12" sm="6">
+            <VCheckbox v-model="form.isFatturazione" label="Fatturazione" hide-details />
+          </VCol>
+          <VCol cols="12" sm="6">
+            <VCheckbox v-model="form.isImpianto" label="Impianto" hide-details />
+          </VCol>
+        </VRow>
+
+        <!-- Sotto tipo + Rete (solo se Impianto) -->
+        <VRow v-if="form.isImpianto" class="mt-2">
+          <VCol cols="12" sm="6">
             <AppSelect
               v-model="form.sottoTipo"
-              :items="[...SOTTO_TIPI_IMPIANTO]"
-              label="Sotto tipo"
+              :items="store.tipiTecnologia.map(t => ({ title: t.nome, value: t.nome }))"
+              label="Tecnologia"
               clearable
             />
           </VCol>
-          <VCol v-if="showSottoTipo" cols="12" sm="4">
+          <VCol cols="12" sm="6">
             <AppSelect
               v-model="form.rete"
-              :items="[...RETI]"
+              :items="store.retiRiferimento.map(r => ({ title: r.nome, value: r.nome }))"
               label="Rete"
               clearable
             />
           </VCol>
         </VRow>
 
-        <!-- Comune (autocomplete EGON) -->
-        <VRow>
-          <VCol cols="12">
-            <AppAutocomplete
-              v-model="form.citta"
-              :items="comuniResults"
-              item-title="comune"
-              item-value="comune"
-              label="Comune"
-              :loading="searchingComuni"
-              :rules="[v => !!v || 'Obbligatorio']"
-              no-filter
-              @update:search="onComuneInput"
-              @update:model-value="val => {
-                const item = comuniResults.find(c => c.comune === val)
-                if (item) selectComune(item)
-              }"
-            >
-              <template #no-data>
-                <VListItem v-if="form.citta.length >= 3">
-                  <VListItemTitle>Nessun risultato</VListItemTitle>
-                </VListItem>
-                <VListItem v-else>
-                  <VListItemTitle>Digita almeno 3 caratteri</VListItemTitle>
-                </VListItem>
-              </template>
-            </AppAutocomplete>
-          </VCol>
-        </VRow>
-
-        <!-- Strada + Civico (autocomplete EGON) -->
-        <VRow>
-          <VCol cols="12" sm="8">
-            <AppAutocomplete
-              v-model="form.strada"
-              :items="stradeResults.map(s => ({ ...s, label: s.frazione ? `${s.strada} - ${s.frazione}` : s.strada }))"
-              item-title="label"
-              item-value="strada"
-              label="Strada"
-              :loading="searchingStrade"
-              :readonly="!comuneSelected"
-              :rules="[v => !!v || 'Obbligatorio']"
-              no-filter
-              @update:search="onStradaInput"
-              @update:model-value="val => {
-                const item = stradeResults.find(s => s.strada === val)
-                if (item) selectStrada(item)
-              }"
-            >
-              <template #no-data>
-                <VListItem>
-                  <VListItemTitle>{{ !comuneSelected ? 'Seleziona prima un comune' : form.strada.length < 3 ? 'Digita almeno 3 caratteri' : 'Nessun risultato' }}</VListItemTitle>
-                </VListItem>
-              </template>
-            </AppAutocomplete>
-          </VCol>
-          <VCol cols="12" sm="4">
-            <AppAutocomplete
-              v-model="form.numero"
-              :items="civiciResults"
-              item-title="civico"
-              item-value="civico"
-              label="Civico"
-              :loading="searchingCivici"
-              :readonly="!stradaSelected"
-              :rules="[v => !!v || 'Obbligatorio', () => !!form.egonCivico || 'Seleziona un civico EGON']"
-              no-filter
-              @update:search="onCivicoInput"
-              @update:model-value="val => {
-                const item = civiciResults.find(c => c.civico === val)
-                if (item) selectCivico(item)
-              }"
-            >
-              <template #no-data>
-                <VListItem>
-                  <VListItemTitle>{{ !stradaSelected ? 'Seleziona prima una strada' : 'Nessun risultato' }}</VListItemTitle>
-                </VListItem>
-              </template>
-            </AppAutocomplete>
-          </VCol>
-        </VRow>
-
-        <!-- Dettagli compilati automaticamente -->
-        <VRow>
-          <VCol cols="12" sm="4">
-            <AppTextField v-model="form.frazione" label="Frazione" readonly />
-          </VCol>
-          <VCol cols="12" sm="4">
-            <AppTextField v-model="form.provincia" label="Provincia" readonly />
-          </VCol>
-          <VCol cols="12" sm="4">
-            <AppTextField v-model="form.cap" label="CAP" readonly />
-          </VCol>
-        </VRow>
-
-        <!-- EGON info (readonly, informativo) -->
-        <VRow v-if="form.egonCivico">
-          <VCol cols="12">
-            <VAlert type="success" variant="tonal" density="compact">
-              Codice EGON Civico: <strong>{{ form.egonCivico }}</strong>
-            </VAlert>
-          </VCol>
-        </VRow>
-
-        <!-- Principale -->
-        <VRow>
-          <VCol cols="12">
-            <VSwitch v-model="form.principale" label="Indirizzo principale" />
-          </VCol>
-        </VRow>
+        <!-- Validazione: almeno un uso selezionato -->
+        <VAlert
+          v-if="!form.isFatturazione && !form.isImpianto"
+          type="warning"
+          variant="tonal"
+          density="compact"
+          class="mt-4"
+        >
+          Seleziona almeno un uso per l'indirizzo
+        </VAlert>
       </VCardText>
 
       <VCardText class="d-flex justify-end gap-4">
@@ -401,3 +489,32 @@ async function save() {
     </VCard>
   </VDialog>
 </template>
+
+<style>
+.egon-field {
+  position: relative;
+}
+
+.egon-results {
+  position: absolute;
+  z-index: 10;
+  inset-inline: 12px;
+  background: rgb(var(--v-theme-surface));
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  max-block-size: 200px;
+  overflow-y: auto;
+}
+
+.egon-result-item {
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.egon-result-item:hover,
+.egon-result-highlighted {
+  background: rgba(var(--v-theme-primary), 0.08);
+}
+</style>

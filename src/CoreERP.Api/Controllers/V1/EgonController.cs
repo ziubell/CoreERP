@@ -45,4 +45,17 @@ public class EgonController : ControllerBase
         var result = await _egonService.SearchCivicAsync(egonStrada, q);
         return Ok(result);
     }
+
+    [HttpGet("normalizza")]
+    public async Task<IActionResult> Normalize([FromQuery] string city, [FromQuery] string street, [FromQuery] string? fraction = null)
+    {
+        if (string.IsNullOrWhiteSpace(city) || string.IsNullOrWhiteSpace(street))
+            return BadRequest(new { message = "City e street sono obbligatori" });
+
+        var result = await _egonService.NormalizeAsync(city, street, fraction);
+        if (result == null)
+            return NotFound(new { message = "Indirizzo non trovato" });
+
+        return Ok(result);
+    }
 }

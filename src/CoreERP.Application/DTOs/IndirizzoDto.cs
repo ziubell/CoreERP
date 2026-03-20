@@ -3,7 +3,8 @@ namespace CoreERP.Application.DTOs;
 public record IndirizzoDto(
     int Id,
     int AnagraficaId,
-    string Tipo,
+    bool IsFatturazione,
+    bool IsImpianto,
     string? SottoTipo,
     string? Rete,
     string Strada,
@@ -18,7 +19,6 @@ public record IndirizzoDto(
     string? EgonCivico,
     string? EgonStrada,
     string? EgonLocalita,
-    bool Principale,
     string? AnagraficaDenominazione,
     DateTime DataCreazione);
 
@@ -26,18 +26,19 @@ public record IndirizzoListItemDto(
     int Id,
     int AnagraficaId,
     string AnagraficaDenominazione,
-    string Tipo,
+    bool IsFatturazione,
+    bool IsImpianto,
     string? SottoTipo,
     string? Rete,
     string IndirizzoCompleto,
     string Citta,
-    string Provincia,
-    bool Principale);
+    string Provincia);
 
 public record CreateIndirizzoRequest
 {
     public int AnagraficaId { get; init; }
-    public string Tipo { get; init; } = string.Empty;
+    public bool IsFatturazione { get; init; }
+    public bool IsImpianto { get; init; }
     public string? SottoTipo { get; init; }
     public string? Rete { get; init; }
     public string Strada { get; init; } = string.Empty;
@@ -52,12 +53,12 @@ public record CreateIndirizzoRequest
     public string? EgonCivico { get; init; }
     public string? EgonStrada { get; init; }
     public string? EgonLocalita { get; init; }
-    public bool Principale { get; init; }
 }
 
 public record UpdateIndirizzoRequest
 {
-    public string Tipo { get; init; } = string.Empty;
+    public bool IsFatturazione { get; init; }
+    public bool IsImpianto { get; init; }
     public string? SottoTipo { get; init; }
     public string? Rete { get; init; }
     public string Strada { get; init; } = string.Empty;
@@ -72,10 +73,12 @@ public record UpdateIndirizzoRequest
     public string? EgonCivico { get; init; }
     public string? EgonStrada { get; init; }
     public string? EgonLocalita { get; init; }
-    public bool Principale { get; init; }
 }
 
 // EGON API DTOs
 public record EgonComuneDto(string EgonComune, string Comune);
 public record EgonStradaDto(string EgonStrada, string Strada, string Comune, string Provincia, string? CAP, string? Frazione);
 public record EgonCivicoDto(string EgonCivico, string Civico);
+public record EgonNormalizzazioneDto(
+    string? Address, string? Zip, string? Section, string? City,
+    string? ProvinceShort, double? Latitude, double? Longitude, long? EgonId);

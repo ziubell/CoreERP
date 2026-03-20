@@ -17,8 +17,8 @@ public class IndirizzoRepository : IIndirizzoRepository
     {
         return await _db.Indirizzi
             .Where(i => i.AnagraficaId == anagraficaId)
-            .OrderBy(i => i.Tipo)
-            .ThenByDescending(i => i.Principale)
+            .OrderByDescending(i => i.IsFatturazione)
+            .ThenByDescending(i => i.IsImpianto)
             .ToListAsync();
     }
 
@@ -27,7 +27,12 @@ public class IndirizzoRepository : IIndirizzoRepository
         var query = _db.Indirizzi.Include(i => i.Anagrafica).AsQueryable();
 
         if (!string.IsNullOrEmpty(tipo))
-            query = query.Where(i => i.Tipo == tipo);
+        {
+            if (tipo.Equals("Fatturazione", StringComparison.OrdinalIgnoreCase))
+                query = query.Where(i => i.IsFatturazione);
+            else if (tipo.Equals("Impianto", StringComparison.OrdinalIgnoreCase))
+                query = query.Where(i => i.IsImpianto);
+        }
 
         if (!string.IsNullOrEmpty(ricerca))
             query = query.Where(i =>
@@ -47,7 +52,12 @@ public class IndirizzoRepository : IIndirizzoRepository
         var query = _db.Indirizzi.AsQueryable();
 
         if (!string.IsNullOrEmpty(tipo))
-            query = query.Where(i => i.Tipo == tipo);
+        {
+            if (tipo.Equals("Fatturazione", StringComparison.OrdinalIgnoreCase))
+                query = query.Where(i => i.IsFatturazione);
+            else if (tipo.Equals("Impianto", StringComparison.OrdinalIgnoreCase))
+                query = query.Where(i => i.IsImpianto);
+        }
 
         if (!string.IsNullOrEmpty(ricerca))
             query = query.Where(i =>

@@ -4,6 +4,7 @@ using CoreERP.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CoreERP.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260320121307_IndirizziUsoBooleans")]
+    partial class IndirizziUsoBooleans
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -458,37 +461,6 @@ namespace CoreERP.Infrastructure.Migrations
                     b.ToTable("MotiviDisattivazione", (string)null);
                 });
 
-            modelBuilder.Entity("CoreERP.Domain.Entities.Anagrafica.ReteRiferimento", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("Attivo")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Descrizione")
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
-
-                    b.Property<string>("Nome")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<int>("Ordine")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Nome")
-                        .IsUnique();
-
-                    b.ToTable("RetiRiferimento", (string)null);
-                });
-
             modelBuilder.Entity("CoreERP.Domain.Entities.Anagrafica.RuoloContatto", b =>
                 {
                     b.Property<int>("Id")
@@ -575,37 +547,6 @@ namespace CoreERP.Infrastructure.Migrations
                         .IsDescending(false, false, true);
 
                     b.ToTable("StoricoModifiche", (string)null);
-                });
-
-            modelBuilder.Entity("CoreERP.Domain.Entities.Anagrafica.TipoTecnologia", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("Attivo")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Descrizione")
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
-
-                    b.Property<string>("Nome")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<int>("Ordine")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Nome")
-                        .IsUnique();
-
-                    b.ToTable("TipiTecnologia", (string)null);
                 });
 
             modelBuilder.Entity("CoreERP.Domain.Entities.Notifications.ImpostazioniNotificaUtente", b =>

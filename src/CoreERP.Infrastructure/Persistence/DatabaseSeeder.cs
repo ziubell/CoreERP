@@ -102,6 +102,8 @@ public static class DatabaseSeeder
         await SeedRuoliContattoAsync(context, logger);
         await SeedMotiviDisattivazioneAsync(context, logger);
         await SeedMetodiPagamentoAsync(context, logger);
+        await SeedTipiTecnologiaAsync(context, logger);
+        await SeedRetiRiferimentoAsync(context, logger);
     }
 
     private static async Task SeedTipiNotificaAsync(ApplicationDbContext context, ILogger logger)
@@ -221,5 +223,40 @@ public static class DatabaseSeeder
         context.MetodiPagamento.AddRange(metodi);
         await context.SaveChangesAsync();
         logger.LogInformation("Seed metodi pagamento: {Count} metodi creati", metodi.Length);
+    }
+
+    private static async Task SeedTipiTecnologiaAsync(ApplicationDbContext context, ILogger logger)
+    {
+        if (await context.TipiTecnologia.AnyAsync())
+            return;
+
+        var tipi = new[]
+        {
+            new TipoTecnologia { Nome = "FTTH", Ordine = 1 },
+            new TipoTecnologia { Nome = "FTTC", Ordine = 2 },
+            new TipoTecnologia { Nome = "FWA", Ordine = 3 }
+        };
+
+        context.TipiTecnologia.AddRange(tipi);
+        await context.SaveChangesAsync();
+        logger.LogInformation("Seed tipi tecnologia: {Count} tipi creati", tipi.Length);
+    }
+
+    private static async Task SeedRetiRiferimentoAsync(ApplicationDbContext context, ILogger logger)
+    {
+        if (await context.RetiRiferimento.AnyAsync())
+            return;
+
+        var reti = new[]
+        {
+            new ReteRiferimento { Nome = "FIBERCOP", Ordine = 1 },
+            new ReteRiferimento { Nome = "OPENFIBER", Ordine = 2 },
+            new ReteRiferimento { Nome = "SPADHAUSEN", Ordine = 3 },
+            new ReteRiferimento { Nome = "EOLO", Ordine = 4 }
+        };
+
+        context.RetiRiferimento.AddRange(reti);
+        await context.SaveChangesAsync();
+        logger.LogInformation("Seed reti riferimento: {Count} reti create", reti.Length);
     }
 }

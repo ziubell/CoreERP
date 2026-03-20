@@ -35,13 +35,13 @@ public class IndirizziController : ControllerBase
             i.Id,
             i.AnagraficaId,
             i.Anagrafica?.Denominazione ?? "",
-            i.Tipo,
+            i.IsFatturazione,
+            i.IsImpianto,
             i.SottoTipo,
             i.Rete,
             $"{i.Strada} {i.Numero}, {i.Citta} ({i.Provincia})",
             i.Citta,
-            i.Provincia,
-            i.Principale));
+            i.Provincia));
 
         return Ok(new { items = dtos, totalCount });
     }
@@ -71,9 +71,10 @@ public class IndirizziController : ControllerBase
         var indirizzo = new Indirizzo
         {
             AnagraficaId = request.AnagraficaId,
-            Tipo = request.Tipo,
-            SottoTipo = request.SottoTipo,
-            Rete = request.Rete,
+            IsFatturazione = request.IsFatturazione,
+            IsImpianto = request.IsImpianto,
+            SottoTipo = request.IsImpianto ? request.SottoTipo : null,
+            Rete = request.IsImpianto ? request.Rete : null,
             Strada = request.Strada,
             Numero = request.Numero,
             Frazione = request.Frazione,
@@ -86,7 +87,6 @@ public class IndirizziController : ControllerBase
             EgonCivico = request.EgonCivico,
             EgonStrada = request.EgonStrada,
             EgonLocalita = request.EgonLocalita,
-            Principale = request.Principale,
             CreatoDA = User.FindFirstValue(ClaimTypes.NameIdentifier),
         };
 
@@ -100,9 +100,10 @@ public class IndirizziController : ControllerBase
         var existing = await _repository.GetByIdAsync(id);
         if (existing == null) return NotFound();
 
-        existing.Tipo = request.Tipo;
-        existing.SottoTipo = request.SottoTipo;
-        existing.Rete = request.Rete;
+        existing.IsFatturazione = request.IsFatturazione;
+        existing.IsImpianto = request.IsImpianto;
+        existing.SottoTipo = request.IsImpianto ? request.SottoTipo : null;
+        existing.Rete = request.IsImpianto ? request.Rete : null;
         existing.Strada = request.Strada;
         existing.Numero = request.Numero;
         existing.Frazione = request.Frazione;
@@ -115,7 +116,6 @@ public class IndirizziController : ControllerBase
         existing.EgonCivico = request.EgonCivico;
         existing.EgonStrada = request.EgonStrada;
         existing.EgonLocalita = request.EgonLocalita;
-        existing.Principale = request.Principale;
         existing.ModificatoDa = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         await _repository.UpdateAsync(existing);
@@ -133,9 +133,10 @@ public class IndirizziController : ControllerBase
     }
 
     private static IndirizzoDto MapToDto(Indirizzo i) => new(
-        i.Id, i.AnagraficaId, i.Tipo, i.SottoTipo, i.Rete,
+        i.Id, i.AnagraficaId, i.IsFatturazione, i.IsImpianto,
+        i.SottoTipo, i.Rete,
         i.Strada, i.Numero, i.Frazione, i.Citta, i.Provincia,
         i.Regione, i.CAP, i.Latitudine, i.Longitudine,
-        i.EgonCivico, i.EgonStrada, i.EgonLocalita, i.Principale,
+        i.EgonCivico, i.EgonStrada, i.EgonLocalita,
         i.Anagrafica?.Denominazione, i.DataCreazione);
 }

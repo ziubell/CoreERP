@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { useAnagraficheStore } from '@/stores/anagrafiche'
+
+definePage({ meta: { navActiveLink: 'anagrafiche' } })
 import { TIPO_ANAGRAFICA_LABELS } from '@/types/anagrafica'
 import { exportToCsv, exportToExcel, exportToPdf, printTable, copyTable } from '@/utils/tableExport'
 

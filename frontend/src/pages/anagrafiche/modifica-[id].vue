@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import AnagraficaForm from '@/components/anagrafiche/AnagraficaForm.vue'
 
+definePage({ meta: { navActiveLink: 'anagrafiche' } })
+
 const route = useRoute()
 const id = computed(() => Number(route.params.id))
 </script>

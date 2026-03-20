@@ -77,6 +77,8 @@ public static class DependencyInjection
         services.AddScoped<IRuoloContattoRepository, RuoloContattoRepository>();
         services.AddScoped<IMotivoDisattivazioneRepository, MotivoDisattivazioneRepository>();
         services.AddScoped<IMetodoPagamentoRepository, MetodoPagamentoRepository>();
+        services.AddScoped<ITipoTecnologiaRepository, TipoTecnologiaRepository>();
+        services.AddScoped<IReteRiferimentoRepository, ReteRiferimentoRepository>();
         services.AddScoped<IStoricoModificaRepository, StoricoModificaRepository>();
         services.AddScoped<IAnagraficaService, AnagraficaService>();
 
