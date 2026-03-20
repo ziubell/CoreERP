@@ -2,6 +2,7 @@
 import AccountSettingsNotifications from '@/views/pages/account-settings/AccountSettingsNotifications.vue'
 import AccountSettingsProfile from '@/views/pages/account-settings/AccountSettingsProfile.vue'
 import AccountSettingsSecurity from '@/views/pages/account-settings/AccountSettingsSecurity.vue'
+import AccountSettingsSubscriptions from '@/views/pages/account-settings/AccountSettingsSubscriptions.vue'
 
 definePage({
   meta: {
@@ -16,6 +17,7 @@ const tabs = [
   { title: 'Profilo', icon: 'tabler-user', tab: 'profilo' },
   { title: 'Sicurezza', icon: 'tabler-lock', tab: 'sicurezza' },
   { title: 'Notifiche', icon: 'tabler-bell', tab: 'notifiche' },
+  { title: 'Sottoscrizioni', icon: 'tabler-eye', tab: 'sottoscrizioni' },
 ]
 </script>
 
@@ -45,6 +47,7 @@ const tabs = [
       <AccountSettingsProfile v-if="activeTab === 'profilo'" />
       <AccountSettingsSecurity v-if="activeTab === 'sicurezza'" />
       <AccountSettingsNotifications v-if="activeTab === 'notifiche'" />
+      <AccountSettingsSubscriptions v-if="activeTab === 'sottoscrizioni'" />
     </VCol>
   </VRow>
 </template>

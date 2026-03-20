@@ -62,4 +62,16 @@ public class SottoscrizioneNotificaRepository : ISottoscrizioneNotificaRepositor
             .OrderByDescending(s => s.DataSottoscrizione)
             .ToListAsync();
     }
+
+    public async Task<SottoscrizioneNotifica?> GetAsync(string userId, string entitaTipo, int entitaId)
+    {
+        return await _context.SottoscrizioniNotifica
+            .FirstOrDefaultAsync(s => s.UserId == userId && s.EntitaTipo == entitaTipo && s.EntitaId == entitaId);
+    }
+
+    public async Task UpdateAsync(SottoscrizioneNotifica sottoscrizione)
+    {
+        _context.Entry(sottoscrizione).State = EntityState.Modified;
+        await _context.SaveChangesAsync();
+    }
 }

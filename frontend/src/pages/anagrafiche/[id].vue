@@ -10,6 +10,8 @@ import type { ContattoDialogData } from '@/components/anagrafica/ContattoDialog.
 import IndirizzoDialog from '@/components/anagrafica/IndirizzoDialog.vue'
 import { useIndirizziStore } from '@/stores/indirizzi'
 import type { IndirizzoApi } from '@/types/indirizzo'
+import FollowDialog from '@/components/common/FollowDialog.vue'
+import { $api } from '@/utils/api'
 import { useNotificheStore } from '@/stores/notifiche'
 import { requiredValidator } from '@/@core/utils/validators'
 
@@ -20,6 +22,28 @@ const store = useAnagraficheStore()
 const indirizziStore = useIndirizziStore()
 const id = computed(() => Number(route.params.id))
 const anagrafica = computed(() => store.current)
+
+// Followers
+interface FollowerInfo {
+  userId: string
+  nome: string
+  avatar?: string | null
+}
+const followers = ref<FollowerInfo[]>([])
+
+async function loadFollowers() {
+  try {
+    const data = await $api(`/v1/sottoscrizioni/Anagrafica/${id.value}/followers`)
+    followers.value = data.followers
+  }
+  catch { followers.value = [] }
+}
+
+function getFollowerInitials(nome: string): string {
+  const parts = nome.trim().split(' ')
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
+  return nome[0].toUpperCase()
+}
 
 // Indirizzi
 const indirizziList = ref<IndirizzoApi[]>([])
@@ -83,6 +107,9 @@ async function confirmRemoveAssociation() {
     removeLoading.value = false
   }
 }
+
+// Follow dialog
+const followDialogOpen = ref(false)
 
 // Delete dialog
 const deleteDialogOpen = ref(false)
@@ -168,6 +195,7 @@ onMounted(async () => {
     store.fetchById(id.value),
     store.fetchLookups(),
     indirizziStore.fetchByAnagrafica(id.value).then(r => { indirizziList.value = r }),
+    loadFollowers(),
   ])
 })
 
@@ -274,6 +302,37 @@ const fullAddress = computed(() => {
           <VChip v-if="anagrafica.codiceCliente" size="small" label variant="outlined">
             Cod. {{ anagrafica.codiceCliente }}
           </VChip>
+
+        </div>
+
+        <!-- Followers -->
+        <div v-if="followers.length > 0" class="d-flex align-center gap-2 mt-1">
+          <span class="text-body-2 text-disabled">Seguito da</span>
+          <div class="d-inline-flex">
+            <VAvatar
+              v-for="(f, i) in followers.slice(0, 4)"
+              :key="f.userId"
+              size="32"
+              :color="f.avatar ? undefined : 'primary'"
+              variant="tonal"
+              class="follower-avatar"
+              :style="i > 0 ? 'margin-inline-start: -10px;' : ''"
+            >
+              <VImg v-if="f.avatar" :src="f.avatar" />
+              <span v-else class="text-caption">{{ getFollowerInitials(f.nome) }}</span>
+              <VTooltip activator="parent">{{ f.nome }}</VTooltip>
+            </VAvatar>
+            <VAvatar
+              v-if="followers.length > 4"
+              size="32"
+              color="secondary"
+              variant="tonal"
+              class="follower-avatar"
+              style="margin-inline-start: -10px;"
+            >
+              <span class="text-caption">+{{ followers.length - 4 }}</span>
+            </VAvatar>
+          </div>
         </div>
       </div>
 
@@ -296,6 +355,11 @@ const fullAddress = computed(() => {
           Azioni
           <VMenu activator="parent">
             <VList>
+              <VListItem
+                prepend-icon="tabler-bell"
+                title="Segui"
+                @click="followDialogOpen = true"
+              />
               <VListItem
                 v-if="anagrafica.tipo === 0"
                 prepend-icon="tabler-transform"
@@ -580,6 +644,15 @@ const fullAddress = computed(() => {
     <VProgressCircular indeterminate />
   </div>
 
+  <!-- Follow Dialog -->
+  <FollowDialog
+    v-model="followDialogOpen"
+    entita-tipo="Anagrafica"
+    :entita-id="id"
+    :entita-nome="anagrafica?.denominazione"
+    @updated="loadFollowers"
+  />
+
   <!-- Conferma Rimozione Dialog -->
   <VDialog v-model="removeDialogOpen" max-width="450" persistent>
     <VCard title="Conferma rimozione">
@@ -679,3 +752,9 @@ const fullAddress = computed(() => {
   </VDialog>
 
 </template>
+
+<style>
+.follower-avatar {
+  border: 2px solid rgb(var(--v-theme-surface));
+}
+</style>

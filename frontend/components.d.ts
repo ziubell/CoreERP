@@ -43,6 +43,7 @@ declare module 'vue' {
     DropZone: typeof import('./src/@core/components/DropZone.vue')['default']
     EntityMessages: typeof import('./src/components/common/EntityMessages.vue')['default']
     ErrorHeader: typeof import('./src/components/ErrorHeader.vue')['default']
+    FollowDialog: typeof import('./src/components/common/FollowDialog.vue')['default']
     I18n: typeof import('./src/@core/components/I18n.vue')['default']
     IndirizzoDialog: typeof import('./src/components/anagrafica/IndirizzoDialog.vue')['default']
     MoreBtn: typeof import('./src/@core/components/MoreBtn.vue')['default']
