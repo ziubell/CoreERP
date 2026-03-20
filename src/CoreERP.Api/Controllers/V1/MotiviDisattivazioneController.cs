@@ -1,3 +1,4 @@
+using CoreERP.Application.DTOs;
 using CoreERP.Application.Interfaces;
 using CoreERP.Domain.Entities.Anagrafica;
 using Microsoft.AspNetCore.Authorization;
@@ -21,14 +22,18 @@ public class MotiviDisattivazioneController : ControllerBase
     public async Task<IActionResult> GetAll([FromQuery] bool? attivo = null)
     {
         var result = await _repository.GetAllAsync(attivo);
-        return Ok(result);
+        var dtos = result.Select(m => new MotivoDisattivazioneDto(
+            m.Id, m.Nome, m.Descrizione, m.Attivo, m.Ordine));
+        return Ok(dtos);
     }
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] MotivoDisattivazione motivo)
     {
         var result = await _repository.AddAsync(motivo);
-        return CreatedAtAction(nameof(GetAll), new { id = result.Id }, result);
+        var dto = new MotivoDisattivazioneDto(
+            result.Id, result.Nome, result.Descrizione, result.Attivo, result.Ordine);
+        return CreatedAtAction(nameof(GetAll), new { id = result.Id }, dto);
     }
 
     [HttpPut("{id:int}")]
@@ -42,7 +47,10 @@ public class MotiviDisattivazioneController : ControllerBase
         existing.Attivo = motivo.Attivo;
         existing.Ordine = motivo.Ordine;
         await _repository.UpdateAsync(existing);
-        return Ok(existing);
+
+        var dto = new MotivoDisattivazioneDto(
+            existing.Id, existing.Nome, existing.Descrizione, existing.Attivo, existing.Ordine);
+        return Ok(dto);
     }
 
     [HttpDelete("{id:int}")]

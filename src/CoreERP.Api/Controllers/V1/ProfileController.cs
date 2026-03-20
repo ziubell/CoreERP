@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text.Json.Serialization;
+using CoreERP.Application.Interfaces;
 using CoreERP.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -17,17 +18,20 @@ public class ProfileController : ControllerBase
     private readonly IWebHostEnvironment _environment;
     private readonly IConfiguration _configuration;
     private readonly ILogger<ProfileController> _logger;
+    private readonly ITokenEncryptionService _tokenEncryption;
 
     public ProfileController(
         UserManager<ApplicationIdentityUser> userManager,
         IWebHostEnvironment environment,
         IConfiguration configuration,
-        ILogger<ProfileController> logger)
+        ILogger<ProfileController> logger,
+        ITokenEncryptionService tokenEncryption)
     {
         _userManager = userManager;
         _environment = environment;
         _configuration = configuration;
         _logger = logger;
+        _tokenEncryption = tokenEncryption;
     }
 
     /// <summary>
@@ -360,12 +364,14 @@ public class ProfileController : ControllerBase
                 return Redirect($"{frontendUrl}/account-settings?tab=security&microsoft=already_linked_other");
             }
 
-            // Link Microsoft account and save tokens
+            // Link Microsoft account and save tokens encrypted
             user.MicrosoftId = graphUser.Id;
             user.MicrosoftEmail = graphUser.Mail ?? graphUser.UserPrincipalName;
             user.DataCollegamentoMicrosoft = DateTime.UtcNow;
-            user.MicrosoftAccessToken = tokenData.AccessToken;
-            user.MicrosoftRefreshToken = tokenData.RefreshToken;
+            user.MicrosoftAccessToken = tokenData.AccessToken != null
+                ? _tokenEncryption.Encrypt(tokenData.AccessToken) : null;
+            user.MicrosoftRefreshToken = tokenData.RefreshToken != null
+                ? _tokenEncryption.Encrypt(tokenData.RefreshToken) : null;
             user.MicrosoftTokenExpiry = DateTime.UtcNow.AddSeconds(tokenData.ExpiresIn);
             await _userManager.UpdateAsync(user);
 

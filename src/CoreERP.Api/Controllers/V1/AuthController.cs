@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
+using CoreERP.Application.Interfaces;
 using CoreERP.Infrastructure.Email;
 using CoreERP.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
@@ -21,19 +22,22 @@ public class AuthController : ControllerBase
     private readonly IConfiguration _configuration;
     private readonly ILogger<AuthController> _logger;
     private readonly IEmailService _emailService;
+    private readonly ITokenEncryptionService _tokenEncryption;
 
     public AuthController(
         UserManager<ApplicationIdentityUser> userManager,
         SignInManager<ApplicationIdentityUser> signInManager,
         IConfiguration configuration,
         ILogger<AuthController> logger,
-        IEmailService emailService)
+        IEmailService emailService,
+        ITokenEncryptionService tokenEncryption)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _configuration = configuration;
         _logger = logger;
         _emailService = emailService;
+        _tokenEncryption = tokenEncryption;
     }
 
     /// <summary>
@@ -306,9 +310,11 @@ public class AuthController : ControllerBase
                 await TryDownloadMicrosoftPhoto(httpClient, user);
             }
 
-            // Save Microsoft tokens for future Graph API calls
-            user.MicrosoftAccessToken = tokenData.AccessToken;
-            user.MicrosoftRefreshToken = tokenData.RefreshToken;
+            // Save Microsoft tokens encrypted for future Graph API calls
+            user.MicrosoftAccessToken = tokenData.AccessToken != null
+                ? _tokenEncryption.Encrypt(tokenData.AccessToken) : null;
+            user.MicrosoftRefreshToken = tokenData.RefreshToken != null
+                ? _tokenEncryption.Encrypt(tokenData.RefreshToken) : null;
             user.MicrosoftTokenExpiry = DateTime.UtcNow.AddSeconds(tokenData.ExpiresIn);
 
             // Update login timestamps

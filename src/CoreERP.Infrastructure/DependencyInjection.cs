@@ -5,6 +5,7 @@ using CoreERP.Infrastructure.Identity;
 using CoreERP.Infrastructure.Persistence;
 using CoreERP.Infrastructure.Persistence.Repositories;
 using CoreERP.Infrastructure.Services;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -39,6 +40,13 @@ public static class DependencyInjection
         })
         .AddEntityFrameworkStores<ApplicationDbContext>()
         .AddDefaultTokenProviders();
+
+        // Data Protection (token encryption)
+        services.AddDataProtection()
+            .SetApplicationName("CoreERP")
+            .PersistKeysToFileSystem(new DirectoryInfo(
+                Path.Combine(AppContext.BaseDirectory, "DataProtection-Keys")));
+        services.AddScoped<ITokenEncryptionService, TokenEncryptionService>();
 
         // Microsoft Graph Service
         services.AddHttpClient();
