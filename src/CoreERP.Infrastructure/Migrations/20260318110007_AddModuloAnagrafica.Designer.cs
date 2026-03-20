@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CoreERP.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260320104740_AddIndirizziTable")]
-    partial class AddIndirizziTable
+    [Migration("20260318110007_AddModuloAnagrafica")]
+    partial class AddModuloAnagrafica
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -296,102 +296,6 @@ namespace CoreERP.Infrastructure.Migrations
                         .HasFilter("Email IS NOT NULL AND IsDeleted = 0");
 
                     b.ToTable("Contatti", (string)null);
-                });
-
-            modelBuilder.Entity("CoreERP.Domain.Entities.Anagrafica.Indirizzo", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("AnagraficaId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("CAP")
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.Property<string>("Citta")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("CreatoDA")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("DataCreazione")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("DataModifica")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("EgonCivico")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("EgonLocalita")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("EgonStrada")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("Frazione")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<double?>("Latitudine")
-                        .HasColumnType("float");
-
-                    b.Property<double?>("Longitudine")
-                        .HasColumnType("float");
-
-                    b.Property<string>("ModificatoDa")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Numero")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<bool>("Principale")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Provincia")
-                        .IsRequired()
-                        .HasMaxLength(5)
-                        .HasColumnType("nvarchar(5)");
-
-                    b.Property<string>("Regione")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Rete")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("SottoTipo")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("Strada")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("Tipo")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AnagraficaId", "Tipo");
-
-                    b.ToTable("Indirizzi", (string)null);
                 });
 
             modelBuilder.Entity("CoreERP.Domain.Entities.Anagrafica.MetodoPagamento", b =>
@@ -1039,17 +943,6 @@ namespace CoreERP.Infrastructure.Migrations
                     b.Navigation("RuoloContatto");
                 });
 
-            modelBuilder.Entity("CoreERP.Domain.Entities.Anagrafica.Indirizzo", b =>
-                {
-                    b.HasOne("CoreERP.Domain.Entities.Anagrafica.Anagrafica", "Anagrafica")
-                        .WithMany("Indirizzi")
-                        .HasForeignKey("AnagraficaId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Anagrafica");
-                });
-
             modelBuilder.Entity("CoreERP.Domain.Entities.Notifications.Notifica", b =>
                 {
                     b.HasOne("CoreERP.Domain.Entities.Notifications.TipoNotifica", "TipoNotifica")
@@ -1126,8 +1019,6 @@ namespace CoreERP.Infrastructure.Migrations
             modelBuilder.Entity("CoreERP.Domain.Entities.Anagrafica.Anagrafica", b =>
                 {
                     b.Navigation("AnagraficaContatti");
-
-                    b.Navigation("Indirizzi");
                 });
 
             modelBuilder.Entity("CoreERP.Domain.Entities.Anagrafica.Contatto", b =>
