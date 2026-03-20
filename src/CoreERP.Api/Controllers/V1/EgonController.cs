@@ -58,4 +58,18 @@ public class EgonController : ControllerBase
 
         return Ok(result);
     }
+
+    [HttpGet("copertura")]
+    public async Task<IActionResult> VerificaCopertura(
+        [FromQuery] string street, [FromQuery] string city, [FromQuery] string? fraction = null)
+    {
+        if (string.IsNullOrWhiteSpace(street) || string.IsNullOrWhiteSpace(city))
+            return BadRequest(new { message = "Street e city sono obbligatori" });
+
+        var result = await _egonService.VerificaCoperturaAsync(street, city, fraction);
+        if (result == null)
+            return Ok(new { coperto = false, attivabili = Array.Empty<object>(), probabili = Array.Empty<object>() });
+
+        return Ok(result);
+    }
 }

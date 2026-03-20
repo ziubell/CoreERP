@@ -82,3 +82,18 @@ public record EgonCivicoDto(string EgonCivico, string Civico);
 public record EgonNormalizzazioneDto(
     string? Address, string? Zip, string? Section, string? City,
     string? ProvinceShort, double? Latitude, double? Longitude, long? EgonId);
+
+// Copertura DTOs
+public record CoperturaResultDto(
+    bool Coperto,
+    List<CoperturaLineaDto> Attivabili,
+    List<CoperturaLineaDto> Probabili);
+
+public record CoperturaLineaDto(
+    string Tipo,
+    string Rete,
+    int Download,
+    int Upload,
+    string? Status,
+    int? Distanza,
+    string? Descrizione);

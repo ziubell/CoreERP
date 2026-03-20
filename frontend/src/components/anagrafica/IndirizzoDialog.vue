@@ -119,9 +119,11 @@ watch(() => props.modelValue, (val) => {
     comuneSelected.value = true
     stradaSelected.value = true
     civicoSelected.value = !!props.indirizzo.egonCivico
+    addressFieldsLocked.value = true
   }
   else if (val) {
     resetForm()
+    addressFieldsLocked.value = false
   }
 })
 
@@ -144,8 +146,7 @@ function resetForm() {
   civiciResults.value = []
 }
 
-// I campi indirizzo sono readonly in modifica (già salvati con EGON)
-const addressFieldsLocked = computed(() => isEdit.value)
+// addressFieldsLocked is set in watch and can be unlocked via menu
 
 // EGON: Comune search
 let comuneTimeout: ReturnType<typeof setTimeout>
@@ -264,6 +265,39 @@ async function selectCivico(item: EgonCivicoApi) {
   }
 }
 
+// Verifica copertura
+const coperturaDialogOpen = ref(false)
+const coperturaLoading = ref(false)
+const coperturaResult = ref<any>(null)
+
+async function verificaCopertura() {
+  if (!form.value.strada || !form.value.citta) return
+  coperturaLoading.value = true
+  try {
+    const street = `${form.value.strada}, ${form.value.numero}`
+    coperturaResult.value = await store.verificaCopertura(street, form.value.citta, form.value.frazione || undefined)
+    coperturaDialogOpen.value = true
+  }
+  catch {
+    notifiche.addToast('Errore verifica copertura', null, null, 'error')
+  }
+  finally {
+    coperturaLoading.value = false
+  }
+}
+
+// Sblocca campi indirizzo per modifica
+function unlockAddressFields() {
+  addressFieldsLocked.value = false
+  comuneSelected.value = true
+  stradaSelected.value = true
+  civicoSelected.value = false
+  form.value.egonCivico = ''
+}
+
+// Override addressFieldsLocked to be writable
+const addressFieldsLocked = ref(false)
+
 const canSave = computed(() =>
   (form.value.isFatturazione || form.value.isImpianto)
   && form.value.citta
@@ -328,7 +362,7 @@ async function save() {
 
       <VCardText>
         <!-- Comune -->
-        <VRow>
+        <VRow dense>
           <VCol cols="12" class="egon-field">
             <AppTextField
               v-model="comuneSearch"
@@ -354,7 +388,7 @@ async function save() {
         </VRow>
 
         <!-- Strada + Civico -->
-        <VRow>
+        <VRow dense>
           <VCol cols="12" sm="8" class="egon-field">
             <AppTextField
               ref="stradaFieldRef"
@@ -404,7 +438,7 @@ async function save() {
         </VRow>
 
         <!-- Dettagli compilati automaticamente (readonly) -->
-        <VRow>
+        <VRow dense>
           <VCol cols="12" sm="4">
             <AppTextField v-model="form.frazione" label="Frazione" disabled />
           </VCol>
@@ -431,7 +465,7 @@ async function save() {
         <VDivider class="my-4" />
 
         <!-- Uso indirizzo (checkbox) -->
-        <VRow>
+        <VRow dense>
           <VCol cols="12" sm="6">
             <VCheckbox v-model="form.isFatturazione" label="Fatturazione" hide-details />
           </VCol>
@@ -472,18 +506,137 @@ async function save() {
         </VAlert>
       </VCardText>
 
-      <VCardText class="d-flex justify-end gap-4">
-        <VBtn variant="tonal" @click="$emit('update:modelValue', false)">
-          Annulla
-        </VBtn>
-        <VBtn
-          color="primary"
-          prepend-icon="tabler-device-floppy"
-          :loading="saving"
-          :disabled="!canSave"
-          @click="save"
+      <VCardText class="d-flex justify-space-between">
+        <!-- Menu Azioni (solo in modifica) -->
+        <div v-if="isEdit">
+          <VBtn variant="tonal" color="secondary" append-icon="tabler-chevron-down">
+            Azioni
+            <VMenu activator="parent">
+              <VList>
+                <VListItem
+                  :prepend-icon="coperturaLoading ? '' : 'tabler-antenna-bars-5'"
+                  :title="coperturaLoading ? 'Verifica in corso...' : 'Verifica Copertura'"
+                  :disabled="coperturaLoading"
+                  @click="verificaCopertura"
+                >
+                  <template v-if="coperturaLoading" #prepend>
+                    <VProgressCircular indeterminate size="20" width="2" class="me-2" />
+                  </template>
+                </VListItem>
+                <VListItem
+                  prepend-icon="tabler-edit"
+                  title="Modifica Indirizzo"
+                  :disabled="!addressFieldsLocked"
+                  @click="unlockAddressFields"
+                />
+                <VDivider />
+                <VListItem
+                  prepend-icon="tabler-trash"
+                  title="Elimina"
+                  class="text-error"
+                  @click="$emit('update:modelValue', false)"
+                />
+              </VList>
+            </VMenu>
+          </VBtn>
+        </div>
+        <div v-else />
+
+        <div class="d-flex gap-4">
+          <VBtn variant="tonal" @click="$emit('update:modelValue', false)">
+            Annulla
+          </VBtn>
+          <VBtn
+            color="primary"
+            prepend-icon="tabler-device-floppy"
+            :loading="saving"
+            :disabled="!canSave"
+            @click="save"
+          >
+            Salva
+          </VBtn>
+        </div>
+      </VCardText>
+    </VCard>
+  </VDialog>
+
+  <!-- Dialog Verifica Copertura -->
+  <VDialog v-model="coperturaDialogOpen" max-width="650">
+    <VCard>
+      <VCardTitle>Verifica Copertura</VCardTitle>
+      <VCardSubtitle>{{ form.strada }} {{ form.numero }}, {{ form.citta }}</VCardSubtitle>
+
+      <VCardText v-if="coperturaResult">
+        <VAlert
+          :type="coperturaResult.coperto ? 'success' : 'warning'"
+          variant="tonal"
+          class="mb-4"
         >
-          Salva
+          {{ coperturaResult.coperto
+            ? 'L\'indirizzo è coperto dai seguenti servizi'
+            : 'L\'indirizzo non è coperto' }}
+        </VAlert>
+
+        <!-- Attivabili -->
+        <template v-if="coperturaResult.attivabili?.length > 0">
+          <h6 class="text-h6 mb-2">Attivabili</h6>
+          <VTable class="mb-4 border rounded" density="compact">
+            <thead>
+              <tr>
+                <th>Tecnologia</th>
+                <th>Rete</th>
+                <th>Velocità</th>
+                <th>Stato</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(linea, i) in coperturaResult.attivabili" :key="'a'+i">
+                <td>
+                  <VChip size="small" color="info" label>{{ linea.tipo }}</VChip>
+                </td>
+                <td>{{ linea.rete }}</td>
+                <td>{{ linea.download }}/{{ linea.upload }} Mbit/s</td>
+                <td>
+                  <VChip size="x-small" :color="linea.status === 'Attivabile' ? 'success' : 'warning'" label>
+                    {{ linea.status }}
+                  </VChip>
+                </td>
+              </tr>
+            </tbody>
+          </VTable>
+        </template>
+
+        <!-- Probabili -->
+        <template v-if="coperturaResult.probabili?.length > 0">
+          <h6 class="text-h6 mb-2">Probabili</h6>
+          <VTable class="border rounded" density="compact">
+            <thead>
+              <tr>
+                <th>Tecnologia</th>
+                <th>Rete</th>
+                <th>Velocità</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(linea, i) in coperturaResult.probabili" :key="'p'+i">
+                <td>
+                  <VChip size="small" color="secondary" label>{{ linea.tipo }}</VChip>
+                </td>
+                <td>{{ linea.rete }}</td>
+                <td>{{ linea.download }}/{{ linea.upload }} Mbit/s</td>
+              </tr>
+            </tbody>
+          </VTable>
+        </template>
+
+        <template v-if="!coperturaResult.attivabili?.length && !coperturaResult.probabili?.length">
+          <p class="text-body-2 text-disabled">Nessun servizio disponibile per questo indirizzo.</p>
+        </template>
+      </VCardText>
+
+      <VCardText class="d-flex justify-end">
+        <VBtn variant="tonal" @click="coperturaDialogOpen = false">
+          Chiudi
         </VBtn>
       </VCardText>
     </VCard>

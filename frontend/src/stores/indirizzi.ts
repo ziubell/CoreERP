@@ -85,6 +85,12 @@ export const useIndirizziStore = defineStore('indirizzi', () => {
     return await $api(`/v1/egon/normalizza?${params}`)
   }
 
+  async function verificaCopertura(street: string, city: string, fraction?: string) {
+    const params = new URLSearchParams({ street, city })
+    if (fraction) params.set('fraction', fraction)
+    return await $api(`/v1/egon/copertura?${params}`)
+  }
+
   async function fetchTipiTecnologia() {
     tipiTecnologia.value = await $api('/v1/tipi-tecnologia?attivo=true')
   }
@@ -113,6 +119,7 @@ export const useIndirizziStore = defineStore('indirizzi', () => {
     searchStrade,
     searchCivici,
     normalize,
+    verificaCopertura,
     fetchTipiTecnologia,
     fetchRetiRiferimento,
     fetchLookups,
