@@ -1,5 +1,6 @@
 using CoreERP.Domain.Common;
 using CoreERP.Domain.Entities.Anagrafica;
+using CoreERP.Domain.Entities.Messaggi;
 using CoreERP.Domain.Entities.Notifications;
 using CoreERP.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -28,6 +29,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationIdentityUser>
     public DbSet<Indirizzo> Indirizzi => Set<Indirizzo>();
     public DbSet<TipoTecnologia> TipiTecnologia => Set<TipoTecnologia>();
     public DbSet<ReteRiferimento> RetiRiferimento => Set<ReteRiferimento>();
+
+    // Messaggi
+    public DbSet<Messaggio> Messaggi => Set<Messaggio>();
+    public DbSet<AllegatoMessaggio> AllegatiMessaggio => Set<AllegatoMessaggio>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -219,6 +224,32 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationIdentityUser>
             entity.Property(e => e.ValoreNuovoLabel).HasMaxLength(500);
             entity.Property(e => e.ModificatoDa).HasMaxLength(450).IsRequired();
             entity.Property(e => e.Note).HasMaxLength(500);
+        });
+
+        // === Messaggi ===
+
+        builder.Entity<Messaggio>(entity =>
+        {
+            entity.ToTable("Messaggi");
+            entity.HasIndex(e => new { e.EntitaTipo, e.EntitaId, e.DataCreazione }).IsDescending(false, false, true);
+
+            entity.Property(e => e.EntitaTipo).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.UserId).HasMaxLength(450).IsRequired();
+            entity.Property(e => e.Testo).IsRequired();
+        });
+
+        builder.Entity<AllegatoMessaggio>(entity =>
+        {
+            entity.ToTable("AllegatiMessaggio");
+
+            entity.Property(e => e.NomeFile).HasMaxLength(500).IsRequired();
+            entity.Property(e => e.Percorso).HasMaxLength(500).IsRequired();
+            entity.Property(e => e.ContentType).HasMaxLength(500).IsRequired();
+
+            entity.HasOne(e => e.Messaggio)
+                .WithMany(m => m.Allegati)
+                .HasForeignKey(e => e.MessaggioId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 

@@ -82,6 +82,9 @@ public static class DependencyInjection
         services.AddScoped<IStoricoModificaRepository, StoricoModificaRepository>();
         services.AddScoped<IAnagraficaService, AnagraficaService>();
 
+        // Messaggi
+        services.AddScoped<IMessaggioRepository, MessaggioRepository>();
+
         // Indirizzo & EGON Services
         services.AddScoped<IIndirizzoRepository, IndirizzoRepository>();
         services.AddScoped<IEgonService, EgonService>();

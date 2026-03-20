@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useContattiStore } from '@/stores/contatti'
 import { useNotificheStore } from '@/stores/notifiche'
+import EntityMessages from '@/components/common/EntityMessages.vue'
 
 definePage({ meta: { navActiveLink: 'contatti' } })
 
@@ -150,6 +151,11 @@ async function confirmDelete() {
             </div>
           </VCardText>
         </VCard>
+
+        <!-- Messaggi -->
+        <div class="mt-4">
+          <EntityMessages entita-tipo="Contatto" :entita-id="id" />
+        </div>
       </VCol>
     </VRow>
   </div>
